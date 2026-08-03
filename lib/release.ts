@@ -9,7 +9,7 @@ export type PublicRelease = {
 export async function getPublicRelease(): Promise<PublicRelease> {
   const response = await fetch(`https://api.github.com/repos/${repository}/releases/latest`, {
     headers: { Accept: "application/vnd.github+json" },
-    next: { revalidate: 300 }
+    cache: "no-store"
   });
   if (!response.ok) {
     return fallbackRelease();
@@ -30,7 +30,7 @@ export async function getPublicRelease(): Promise<PublicRelease> {
 
 function fallbackRelease(): PublicRelease {
   return {
-    tag: "v1.2.2",
+    tag: "v1.2.3",
     dmgURL: `https://github.com/${repository}/releases/latest/download/Pressay.dmg`,
     checksumURL: `https://github.com/${repository}/releases/latest/download/Pressay.dmg.sha256`
   };
