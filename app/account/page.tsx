@@ -1,0 +1,5 @@
+import { auth } from "@clerk/nextjs/server";
+import Link from "next/link";
+import { PortalButton } from "@/components/portal-button";
+export default async function AccountPage() { if (!process.env.CLERK_SECRET_KEY) return <AccountUnavailable />; const { userId } = await auth(); if (!userId) return <main className="auth-page"><div className="auth-placeholder"><h1>Compte Pressay</h1><p>Connecte-toi pour gérer tes appareils et ton abonnement.</p><Link className="button button-primary" href="/sign-in">Connexion</Link></div></main>; return <main className="auth-page"><div className="auth-placeholder"><span className="mono-label">ACCOUNT / {userId.slice(0, 8)}</span><h1>Ton compte Pressay</h1><p>Gère le paiement, les factures et l’annulation dans le portail sécurisé Stripe.</p><PortalButton>Ouvrir la facturation</PortalButton></div></main>; }
+function AccountUnavailable() { return <main className="auth-page"><div className="auth-placeholder"><h1>Compte bientôt disponible.</h1><p>Le site public reste téléchargeable sans compte. La bêta commerciale ouvrira après validation staging.</p><Link className="button" href="/fr">Retour</Link></div></main>; }

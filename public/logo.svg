@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pressay">
+  <rect width="64" height="64" rx="16" fill="#111015"/>
+  <path d="M17 35V22h9.5c6.1 0 10 3.1 10 8.6s-3.9 8.7-10 8.7H23V47h-6V35Zm6-1.2h3.1c2.9 0 4.5-1 4.5-3.2s-1.6-3.1-4.5-3.1H23v6.3Z" fill="#F4F0E7"/>
+  <path d="M42 19v26M48 24v16M54 29v6" stroke="#5B6CFF" stroke-width="4" stroke-linecap="round"/>
+</svg>

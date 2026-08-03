@@ -1,0 +1,5 @@
+import { ImageResponse } from "next/og";
+export const alt = "Pressay — Maintiens Fn. Parle. C’est écrit.";
+export const size = { width: 1200, height: 630 };
+export const contentType = "image/png";
+export default function Image() { return new ImageResponse(<div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 72, color: "#f4f0e7", background: "#0d0c10", fontFamily: "sans-serif" }}><div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 34 }}><span style={{ width: 42, height: 42, borderRadius: 12, background: "#5b6cff", display: "flex" }} />pressay</div><div style={{ display: "flex", flexDirection: "column", fontSize: 82, maxWidth: 940, letterSpacing: -4, lineHeight: 1 }}><span>Maintiens Fn. Parle.</span><span>C’est écrit.</span></div><div style={{ display: "flex", justifyContent: "space-between", fontSize: 24, color: "#aaa5b2" }}><span>DICTÉE CONTRÔLABLE POUR macOS</span><span>press-say.app</span></div></div>, size); }

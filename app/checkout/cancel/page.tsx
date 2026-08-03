@@ -1,0 +1,1 @@
+import Link from "next/link"; export default function Page() { return <main className="auth-page"><div className="auth-placeholder"><span className="mono-label">CHECKOUT / CANCELLED</span><h1>Aucun paiement effectué.</h1><p>Free reste disponible sans compte ni quota local/BYOK.</p><Link className="button" href="/fr/pricing">Retour aux tarifs</Link></div></main>; }
