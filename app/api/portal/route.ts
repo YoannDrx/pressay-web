@@ -6,7 +6,8 @@ export async function POST() {
   if (!apiURL || !process.env.CLERK_SECRET_KEY) return NextResponse.json({ error: "commercial_beta_not_configured" }, { status: 503 });
   const { userId, getToken } = await auth();
   if (!userId) return NextResponse.json({ error: "authentication_required" }, { status: 401 });
-  const token = await getToken();
+  const token = await getToken({ template: "pressay-api" });
+  if (!token) return NextResponse.json({ error: "api_token_unavailable" }, { status: 401 });
   const response = await fetch(`${apiURL}/billing/portal`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
   return new NextResponse(await response.text(), { status: response.status, headers: { "Content-Type": "application/json" } });
 }
