@@ -32,3 +32,9 @@ test("commercial UI fails closed before Clerk and Stripe are configured", async 
   const response = await page.request.post("/api/checkout", { data: { plan: "pro_byok", interval: "annual" } });
   expect(response.status()).toBe(503);
 });
+
+test("Clerk sign-in callback is handled by the catch-all route", async ({ page }) => {
+  await page.goto("/sign-in/sso-callback");
+  await expect(page).toHaveTitle(/Pressay/);
+  await expect(page.getByRole("heading", { name: "Connexion bientôt disponible." })).toBeVisible();
+});
