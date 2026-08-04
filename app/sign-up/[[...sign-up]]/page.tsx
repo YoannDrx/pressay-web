@@ -1,8 +1,8 @@
-import { SignIn } from "@clerk/nextjs";
+import { SignUp } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function SignInPage() {
+export default function SignUpPage() {
   return (
     <main className="auth-page">
       <Link className="brand auth-brand" href="/fr">
@@ -10,16 +10,11 @@ export default function SignInPage() {
         pressay
       </Link>
       {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
-        <SignIn
-          fallbackRedirectUrl="/account"
-          signUpFallbackRedirectUrl="/account"
-          signUpUrl="/sign-up"
-          withSignUp
-        />
+        <SignUp fallbackRedirectUrl="/account" signInUrl="/sign-in" />
       ) : (
         <div className="auth-placeholder">
           <span className="mono-label">COMMERCIAL BETA</span>
-          <h1>Connexion bientôt disponible.</h1>
+          <h1>Inscription bientôt disponible.</h1>
           <p>Le fournisseur Clerk doit être configuré sur staging avant d’ouvrir les comptes.</p>
           <Link className="button" href="/fr">
             Retour au site

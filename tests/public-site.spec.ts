@@ -38,3 +38,8 @@ test("Clerk sign-in callback is handled by the catch-all route", async ({ page }
   await expect(page).toHaveTitle(/Pressay/);
   await expect(page.getByRole("heading", { name: "Connexion bientôt disponible." })).toBeVisible();
 });
+
+test("local sign-up route is available", async ({ page }) => {
+  await page.goto("/sign-up");
+  await expect(page.getByRole("heading", { name: "Inscription bientôt disponible." })).toBeVisible();
+});
