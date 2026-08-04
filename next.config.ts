@@ -10,8 +10,8 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://img.clerk.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://api.press-say.app https://api-staging.press-say.app https://*.clerk.accounts.dev",
-  "frame-src 'self' https://*.clerk.accounts.dev https://checkout.stripe.com",
+  "connect-src 'self' https://api.press-say.app https://api-staging.press-say.app https://*.clerk.accounts.dev https://clerk.press-say.app https://accounts.press-say.app",
+  "frame-src 'self' https://*.clerk.accounts.dev https://clerk.press-say.app https://accounts.press-say.app https://checkout.stripe.com",
   "upgrade-insecure-requests"
 ].join("; ");
 
