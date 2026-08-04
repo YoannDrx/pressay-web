@@ -19,7 +19,7 @@ test("English routes and factual pricing are available", async ({ page }) => {
 
 test("download page exposes the public stable and checksum", async ({ page }) => {
   await page.goto("/fr/download");
-  await expect(page.getByText(/^v1\.2\.3$/)).toBeVisible();
+  await expect(page.getByText(/^v1\.2\.4$/)).toBeVisible();
   await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute("href", /Pressay\.dmg\.sha256$/);
 });
 

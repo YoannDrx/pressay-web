@@ -30,7 +30,7 @@ export async function getPublicRelease(): Promise<PublicRelease> {
 
 function fallbackRelease(): PublicRelease {
   return {
-    tag: "v1.2.3",
+    tag: "v1.2.4",
     dmgURL: `https://github.com/${repository}/releases/latest/download/Pressay.dmg`,
     checksumURL: `https://github.com/${repository}/releases/latest/download/Pressay.dmg.sha256`
   };
