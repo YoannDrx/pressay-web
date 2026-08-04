@@ -15,6 +15,9 @@ test("English routes and factual pricing are available", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toContainText("generous Free");
   await expect(page.getByRole("row", { name: /Pressay/ })).toContainText("€69");
   await expect(page.getByRole("row", { name: /Superwhisper/ })).toContainText("$249.99");
+  await expect(page.getByRole("button", { name: "Try 14 days — €69/year" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Or €7.99/month" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Become Founding — €149" })).toBeVisible();
 });
 
 test("download page exposes the public stable and checksum", async ({ page }) => {

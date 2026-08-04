@@ -17,9 +17,18 @@ export function Pricing({ locale, compact = false }: { locale: Locale; compact?:
       </ul>
       {plan.code === "free" ?
         <Link className="button full" href={`/${locale}/download`}>{locale === "fr" ? "Télécharger" : "Download"}</Link> :
-        <CheckoutButton plan={plan.code} interval={plan.code === "pro_byok" ? "annual" : "lifetime"}>
-          {locale === "fr" ? (plan.code === "pro_byok" ? "Essayer Pro" : "Devenir Founding") : (plan.code === "pro_byok" ? "Try Pro" : "Become Founding")}
-        </CheckoutButton>}
+        plan.code === "pro_byok" ?
+          <div className="price-actions">
+            <CheckoutButton plan="pro_byok" interval="annual">
+              {locale === "fr" ? "Essayer 14 jours — 69 €/an" : "Try 14 days — €69/year"}
+            </CheckoutButton>
+            <CheckoutButton plan="pro_byok" interval="monthly" variant="secondary">
+              {locale === "fr" ? "Ou 7,99 €/mois" : "Or €7.99/month"}
+            </CheckoutButton>
+          </div> :
+          <CheckoutButton plan="lifetime_byok" interval="lifetime">
+            {locale === "fr" ? "Devenir Founding — 149 €" : "Become Founding — €149"}
+          </CheckoutButton>}
     </article>)}
   </div>;
 }

@@ -5,10 +5,12 @@ import { useState } from "react";
 export function CheckoutButton({
   plan,
   interval,
+  variant = "primary",
   children
 }: {
   plan: "pro_byok" | "lifetime_byok";
-  interval: "annual" | "lifetime";
+  interval: "monthly" | "annual" | "lifetime";
+  variant?: "primary" | "secondary";
   children: React.ReactNode;
 }) {
   const [pending, setPending] = useState(false);
@@ -36,7 +38,7 @@ export function CheckoutButton({
   }
 
   return <>
-    <button className="button button-primary full" onClick={checkout} disabled={pending}>
+    <button className={`button ${variant === "primary" ? "button-primary" : "button-secondary"} full`} onClick={checkout} disabled={pending}>
       {pending ? "…" : children}
     </button>
     {error ? <small className="form-error" role="alert">{error}</small> : null}
