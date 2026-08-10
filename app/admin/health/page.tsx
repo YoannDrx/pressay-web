@@ -1,0 +1,4 @@
+import { AdminHeading } from "@/components/admin-heading";
+import { pressayJSON } from "@/lib/pressay-api";
+type Health = { api: Record<string, unknown>; database: Record<string, unknown>; billing: Record<string, unknown>; deletionJobs: Record<string, unknown>; referralRewards: Record<string, unknown>; flags: Record<string, boolean> };
+export default async function AdminHealthPage() { const { data } = await pressayJSON<Health>("admin/health"); return <><AdminHeading eyebrow="API / DATABASE / JOBS" title="Santé" detail="Fraîcheur Stripe, jobs en retard, récompenses en échec et flags de déploiement." /><section className="admin-grid-two">{data ? Object.entries(data).map(([name, value]) => <article className="admin-panel" key={name}><h2>{name}</h2><pre className="admin-json">{JSON.stringify(value, null, 2)}</pre></article>) : null}</section></>; }

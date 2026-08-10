@@ -6,8 +6,8 @@ export const copy = {
   fr: {
     nav: { product: "Produit", security: "Sécurité", pricing: "Tarifs", download: "Télécharger", signIn: "Connexion" },
     eyebrow: "DICTÉE CONTRÔLABLE POUR macOS",
-    title: "Maintiens Fn. Parle. C’est écrit.",
-    intro: "Pressay écrit et transforme ta voix partout sur macOS. Tu vois la cible, tu choisis le contexte et ton presse-papiers revient exactement comme avant.",
+    title: "Votre voix, partout où vous écrivez.",
+    intro: "Parlez naturellement. Pressay transforme vos idées en texte clair dans toutes vos apps — en local ou avec votre propre clé.",
     download: "Télécharger pour macOS",
     seePricing: "Voir les tarifs",
     proofs: [
@@ -27,8 +27,8 @@ export const copy = {
   en: {
     nav: { product: "Product", security: "Security", pricing: "Pricing", download: "Download", signIn: "Sign in" },
     eyebrow: "CONTROLLED DICTATION FOR macOS",
-    title: "Hold Fn. Speak. It’s written.",
-    intro: "Pressay writes and transforms your voice anywhere on macOS. You can see the target, choose the context, and get your clipboard back exactly as it was.",
+    title: "Your voice, wherever you write.",
+    intro: "Speak naturally. Pressay turns your ideas into clear text in every app — locally or with your own key.",
     download: "Download for macOS",
     seePricing: "See pricing",
     proofs: [
