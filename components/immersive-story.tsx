@@ -84,7 +84,7 @@ function ProductStage({ locale }: { locale: Locale }) {
         </aside>
         <div className="mail-compose">
           <div className="compose-line"><span>{fr ? "À" : "To"}</span> team@press-say.app</div>
-          <div className="compose-line"><span>{fr ? "Objet" : "Subject"}</span> Version 1.2.5</div>
+          <div className="compose-line"><span>{fr ? "Objet" : "Subject"}</span> Version 1.2.6</div>
           <div className="compose-editor">
             <p className="typed-before">{fr ? "Bonjour,\n\nla nouvelle version est prête." : "Hi,\n\nthe new version is ready."}</p>
             <p className="typed-result">{fr ? " Le presse-papiers est maintenant restitué après chaque insertion réussie." : " The clipboard is now restored after every successful insertion."}<i /></p>
