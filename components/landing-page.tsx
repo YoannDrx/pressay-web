@@ -1,12 +1,11 @@
 import Link from "next/link";
+import { AppLogoMarquee } from "@/components/app-logo-marquee";
 import { ImmersiveStory, PageRevealEffects } from "@/components/immersive-story";
 import { Pricing } from "@/components/pricing";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import type { Locale } from "@/lib/content";
 import { copy } from "@/lib/content";
-
-const appNames = ["Mail", "Slack", "Notion", "Safari", "Cursor", "Xcode", "Notes", "Terminal"];
 
 export function LandingPage({ locale }: { locale: Locale }) {
   const t = copy[locale];
@@ -34,8 +33,8 @@ export function LandingPage({ locale }: { locale: Locale }) {
         <div className="hero-key key-right" aria-hidden="true"><span>⌘</span></div>
         <div className="cinema-copy">
           <span className="eyebrow">{t.eyebrow}</span>
-          <h1>{fr ? <>Maintiens Fn.<br />Parle. <span>C’est écrit.</span></> : <>Hold Fn.<br />Speak. <span>It’s written.</span></>}</h1>
-          <p>{t.intro}</p>
+          <h1>{fr ? <>Votre voix,<br /><span>partout où vous écrivez.</span></> : <>Your voice,<br /><span>wherever you write.</span></>}</h1>
+          <p>{fr ? "Parlez naturellement. Pressay transforme vos idées en texte clair dans Mail, Slack, Cursor et toutes vos apps — en local ou avec votre propre clé." : "Speak naturally. Pressay turns your ideas into clear text in Mail, Slack, Cursor and every app — locally or with your own key."}</p>
           <div className="hero-actions">
             <Link className="button button-primary hero-download" href={`/${locale}/download`}><span>⌘</span>{t.download}</Link>
             <Link className="button button-glass" href="#experience">{fr ? "Voir comment ça marche" : "See how it works"}</Link>
@@ -53,9 +52,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
           <span className="mono-label">ONE SHORTCUT / EVERYWHERE</span>
           <h2>{fr ? <>Là où tu peux écrire,<br /><span>tu peux parler.</span></> : <>Wherever you can type,<br /><span>you can speak.</span></>}</h2>
         </div>
-        <div className="app-marquee" aria-label={fr ? "Applications compatibles" : "Compatible applications"}>
-          <div>{[...appNames, ...appNames].map((name, index) => <span key={`${name}-${index}`}><i>{name.slice(0, 1)}</i>{name}</span>)}</div>
-        </div>
+        <AppLogoMarquee locale={locale} />
         <div className="workflow-cards shell">
           <article data-reveal><span>MAIL</span><p>{fr ? "Rédige une réponse nette sans quitter le fil." : "Draft a crisp reply without leaving the thread."}</p><div className="mini-mail"><i />{fr ? "Bonjour, voici le point demandé…" : "Hi, here is the update you asked for…"}</div></article>
           <article data-reveal><span>CODE</span><p>{fr ? "Donne plus de contexte à Cursor, Xcode ou ton terminal." : "Give Cursor, Xcode or your terminal richer context."}</p><pre><b>❯</b> {fr ? "Ajoute un test de non-régression…" : "Add a regression test…"}<i /></pre></article>
@@ -113,7 +110,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
         ]).map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}
       </section>
 
-      <section className="final-cta immersive-cta"><div className="cta-orb" aria-hidden="true" /><div data-reveal><span className="eyebrow">PRESS / SAY</span><h2>{fr ? <>Maintiens Fn.<br />Le reste disparaît.</> : <>Hold Fn.<br />Everything else disappears.</>}</h2><p>{fr ? "Ta voix. Ta cible. Ton contrôle." : "Your voice. Your target. Your control."}</p><Link className="button button-light" href={`/${locale}/download`}>{t.download}</Link></div></section>
+      <section className="final-cta immersive-cta"><div className="cta-orb" aria-hidden="true" /><div data-reveal><span className="eyebrow">PRESS / SAY</span><h2>{fr ? <>Parlez.<br />Le clavier suit.</> : <>Speak.<br />The keyboard follows.</>}</h2><p>{fr ? "Votre voix. Votre cible. Votre contrôle." : "Your voice. Your target. Your control."}</p><Link className="button button-light" href={`/${locale}/download`}>{t.download}</Link></div></section>
     </main>
     <SiteFooter locale={locale} />
   </>;

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("French landing exposes the product contract and metadata", async ({ page }) => {
   const response = await page.goto("/fr");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Maintiens Fn");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Votre voix");
   await expect(page.getByText("presse-papiers", { exact: false }).first()).toBeVisible();
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
   expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
@@ -10,14 +10,30 @@ test("French landing exposes the product contract and metadata", async ({ page }
   await expect(page.locator(":focus-visible")).toBeVisible();
 });
 
-test("English routes and factual pricing are available", async ({ page }) => {
+test("landing navigation and compatibility marquee are accessible", async ({ page }) => {
+  await page.goto("/fr");
+  await expect(page.getByLabel("Choisir la langue")).toContainText("FR");
+  await expect(page.getByLabel("Applications compatibles")).toContainText("Slack");
+  await expect(page.locator(".app-logo-card svg")).toHaveCount(26);
+  await expect(page.getByRole("link", { name: "GitHub" })).toHaveCount(0);
+});
+
+test("expanded legal pages expose identity, privacy and withdrawal routes", async ({ page }) => {
+  await page.goto("/fr/legal");
+  await expect(page.getByText("803 272 590 00024")).toBeVisible();
+  await page.goto("/fr/privacy");
+  await expect(page.getByRole("heading", { name: "Données exclues" })).toBeVisible();
+  await page.goto("/fr/withdrawal");
+  await expect(page.getByRole("heading", { name: "Droit de rétractation" })).toBeVisible();
+});
+
+test("English routes expose factual pricing while paid launch is closed", async ({ page }) => {
   await page.goto("/en/pricing");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("generous Free");
   await expect(page.getByRole("row", { name: /Pressay/ })).toContainText("€69");
   await expect(page.getByRole("row", { name: /Superwhisper/ })).toContainText("$249.99");
-  await expect(page.getByRole("button", { name: "Try 14 days — €69/year" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Or €7.99/month" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Become Founding — €149" })).toBeVisible();
+  await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(2);
+  await expect(page.getByRole("button", { name: /€69|€7\.99|€149/ })).toHaveCount(0);
 });
 
 test("download page exposes the public stable and checksum", async ({ page }) => {
