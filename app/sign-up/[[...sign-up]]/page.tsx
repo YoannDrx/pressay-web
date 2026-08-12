@@ -1,21 +1,26 @@
 import { SignUp } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
+import { BetterAuthSignIn } from "@/components/better-auth-sign-in";
+import { identityProvider } from "@/lib/auth-env";
 
 export default function SignUpPage() {
+  const provider = identityProvider();
   return (
     <main className="auth-page">
       <Link className="brand auth-brand" href="/fr">
         <Image src="/logo.svg" width="34" height="34" alt="" />
         pressay
       </Link>
-      {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+      {provider === "better-auth" ? (
+        <BetterAuthSignIn callbackURL="/account" />
+      ) : provider === "clerk" ? (
         <SignUp fallbackRedirectUrl="/account" signInUrl="/sign-in" />
       ) : (
         <div className="auth-placeholder">
           <span className="mono-label">COMMERCIAL BETA</span>
           <h1>Inscription bientôt disponible.</h1>
-          <p>Le fournisseur Clerk doit être configuré sur staging avant d’ouvrir les comptes.</p>
+          <p>Le fournisseur d’identité doit être configuré sur staging avant d’ouvrir les comptes.</p>
           <Link className="button" href="/fr">
             Retour au site
           </Link>

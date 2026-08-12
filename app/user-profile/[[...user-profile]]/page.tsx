@@ -1,15 +1,25 @@
 import { UserProfile } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
+import { AccountSecurity } from "@/components/account-security";
+import { identityProvider } from "@/lib/auth-env";
+import { getWebIdentity } from "@/lib/server-identity";
+import { redirect } from "next/navigation";
 
-export default function UserProfilePage() {
+export default async function UserProfilePage() {
+  const provider = identityProvider();
+  if (provider === "better-auth") {
+    if (!await getWebIdentity()) redirect("/sign-in?redirect_url=/user-profile");
+  }
   return (
     <main className="auth-page">
       <Link className="brand auth-brand" href="/account">
         <Image src="/logo.svg" width="34" height="34" alt="" />
         pressay
       </Link>
-      {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+      {provider === "better-auth" ? (
+        <AccountSecurity initialSessions={[]} />
+      ) : provider === "clerk" ? (
         <UserProfile path="/user-profile" />
       ) : (
         <div className="auth-placeholder">

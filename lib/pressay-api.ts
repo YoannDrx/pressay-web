@@ -1,13 +1,13 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { auth } from "@clerk/nextjs/server";
+import { SignJWT } from "jose";
+import { identityProvider } from "@/lib/auth-env";
+import { getWebIdentity, type WebIdentity } from "@/lib/server-identity";
 
 export function commercialIsConfigured(): boolean {
-  return Boolean(
-    process.env.PRESSAY_API_URL &&
-    process.env.CLERK_SECRET_KEY &&
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-  );
+  const provider = identityProvider();
+  if (!process.env.PRESSAY_API_URL || provider === "disabled") return false;
+  return provider === "clerk" || validInternalJWTSecret() !== null;
 }
 
 export function commercialCheckoutIsEnabled(): boolean {
@@ -23,9 +23,9 @@ export async function pressayAPI(
   if (!commercialIsConfigured()) {
     return Response.json({ error: "commercial_beta_not_configured" }, { status: 503 });
   }
-  const { userId, getToken } = await auth();
-  if (!userId) return Response.json({ error: "authentication_required" }, { status: 401 });
-  const token = await getToken({ template: "pressay-api" });
+  const identity = await getWebIdentity();
+  if (!identity) return Response.json({ error: "authentication_required" }, { status: 401 });
+  const token = identity.clerkToken ?? await createInternalAPIToken(identity);
   if (!token) return Response.json({ error: "api_token_unavailable" }, { status: 401 });
   const base = normalizedAPIURL();
   const headers = new Headers(init.headers);
@@ -43,6 +43,33 @@ export async function pressayAPI(
     headers,
     cache: "no-store"
   });
+}
+
+async function createInternalAPIToken(identity: WebIdentity): Promise<string | null> {
+  const secret = validInternalJWTSecret();
+  if (!secret) return null;
+  return new SignJWT({
+    email: identity.email,
+    email_verified: identity.emailVerified,
+    name: identity.name,
+    sid: identity.sessionID,
+    pressay_step_up_at: identity.stepUpAt,
+    pressay_step_up_method: identity.stepUpMethod,
+    token_use: "pressay_web_proxy"
+  })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setSubject(identity.subject)
+    .setIssuer(process.env.PRESSAY_INTERNAL_JWT_ISSUER || "https://press-say.app/internal")
+    .setAudience("pressay-api")
+    .setJti(randomUUID())
+    .setIssuedAt()
+    .setExpirationTime("2m")
+    .sign(new TextEncoder().encode(secret));
+}
+
+function validInternalJWTSecret(): string | null {
+  const secret = process.env.PRESSAY_INTERNAL_JWT_SECRET;
+  return secret && secret.length >= 32 ? secret : null;
 }
 
 export async function pressayJSON<T>(path: string): Promise<{ response: Response; data: T | null }> {

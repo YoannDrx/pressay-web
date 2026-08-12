@@ -1,10 +1,11 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { identityProvider } from "@/lib/auth-env";
 
 // Public pages and their browser tests must keep working in environments where
 // Clerk is intentionally not configured. Protected pages still call auth()
 // themselves and fail closed when Clerk is enabled.
-export default process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+export default identityProvider() === "clerk"
   ? clerkMiddleware()
   : () => NextResponse.next();
 

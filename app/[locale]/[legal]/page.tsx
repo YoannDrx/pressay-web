@@ -23,7 +23,7 @@ export default async function LegalPageRoute({ params }: { params: Promise<{ loc
         {page.sections.map((section, index) => <section id={`section-${index + 1}`} key={section.title}><span>{String(index + 1).padStart(2, "0")}</span><h2>{section.title}</h2>{section.paragraphs?.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{section.bullets ? <ul>{section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul> : null}</section>)}
         {legal === "support" ? <SupportLinks locale={lang} /> : null}
         {legal === "withdrawal" ? <WithdrawalActions locale={lang} /> : null}
-        <footer className="legal-updated">{lang === "fr" ? "Dernière mise à jour : 10 août 2026." : "Last updated: August 10, 2026."}</footer>
+        <footer className="legal-updated">{lang === "fr" ? "Dernière mise à jour : 12 août 2026." : "Last updated: August 12, 2026."}</footer>
       </article>
     </div>
   </ContentPage>;
@@ -31,7 +31,7 @@ export default async function LegalPageRoute({ params }: { params: Promise<{ loc
 
 function PrivacyTable({ locale }: { locale: Locale }) {
   const rows = locale === "fr" ? [
-    ["Compte", "Fournir le compte et sécuriser l’accès", "Contrat", "Clerk, Vercel, Neon", "Durée du compte + délais légaux"],
+    ["Compte", "Fournir le compte et sécuriser l’accès", "Contrat", "Better Auth auto-hébergé, Google, Vercel, Neon", "Durée du compte + délais légaux"],
     ["Appareils", "Appliquer les limites et révoquer un Mac", "Contrat / sécurité", "Neon", "Durée du compte, puis suppression"],
     ["Paiements", "Essai, abonnement, facture, remboursement", "Contrat / obligation légale", "Stripe, Vercel, Neon", "Durées comptables et fiscales applicables"],
     ["Codes et referrals", "Attribuer et prévenir la fraude", "Contrat / intérêt légitime", "Neon, Stripe si récompense", "Campagne + période de contestation"],
@@ -39,7 +39,7 @@ function PrivacyTable({ locale }: { locale: Locale }) {
     ["Télémétrie opt-in", "Qualité, versions, architecture et moteur", "Consentement", "Vercel, Neon", "13 mois maximum ou retrait"],
     ["Support et audit", "Résoudre les demandes et tracer l’administration", "Contrat / sécurité", "Yodev, Neon", "Ticket : 3 ans ; audit : 5 ans"],
   ] : [
-    ["Account", "Provide and secure the account", "Contract", "Clerk, Vercel, Neon", "Account lifetime plus legal periods"],
+    ["Account", "Provide and secure the account", "Contract", "Self-hosted Better Auth, Google, Vercel, Neon", "Account lifetime plus legal periods"],
     ["Devices", "Apply limits and revoke a Mac", "Contract / security", "Neon", "Account lifetime, then deletion"],
     ["Payments", "Trial, subscription, invoices and refunds", "Contract / legal duty", "Stripe, Vercel, Neon", "Applicable accounting and tax periods"],
     ["Codes and referrals", "Attribute rewards and prevent fraud", "Contract / legitimate interest", "Neon, Stripe for rewards", "Campaign plus dispute period"],
@@ -63,7 +63,7 @@ function documentFor(locale: Locale, page: LegalPage): { title: string; intro: s
       title: "Mentions légales", intro: "L’identité de l’éditeur, de l’hébergeur et les informations commerciales de Pressay.", summary: "Pressay est un logiciel macOS édité en France par Yodev.", sections: [
         { title: "Éditeur", paragraphs: [commonIdentity], bullets: ["SIREN : 803 272 590", "SIRET : 803 272 590 00024", "Activité : programmation informatique — NAF 6201Z", "Contact : hello@press-say.app", "TVA non applicable, article 293 B du CGI."] },
         { title: "Direction de la publication", paragraphs: ["Le directeur de la publication est Yoann Andrieux. Les demandes juridiques, de confidentialité et de support peuvent être adressées à hello@press-say.app."] },
-        { title: "Hébergement et prestataires", paragraphs: ["Le site et l’API sont hébergés sur Vercel. La base commerciale est hébergée par Neon. L’identité est fournie par Clerk et les paiements par Stripe. Le contenu vocal n’est pas hébergé par ces prestataires dans les modes local/BYOK de Pressay."] },
+        { title: "Hébergement et prestataires", paragraphs: ["Le site, l’API et Better Auth sont hébergés sur Vercel. Les données de compte sont hébergées par Neon. Google intervient uniquement lorsque vous choisissez la connexion Google, et Stripe traite les paiements. Le contenu vocal n’est pas hébergé par ces prestataires dans les modes local/BYOK de Pressay."] },
         { title: "Propriété intellectuelle", paragraphs: ["La marque, l’interface, les textes, illustrations et composants spécifiques à Pressay appartiennent à Yodev ou sont utilisés sous licence. Les marques d’applications affichées restent la propriété de leurs titulaires et n’impliquent aucun partenariat."] },
         { title: "Signalement", paragraphs: ["Pour signaler un contenu illicite, une vulnérabilité ou une atteinte à des droits, écrivez à hello@press-say.app en donnant l’URL, les faits et un moyen de vous recontacter. N’envoyez jamais de clé API ni de dictée sensible."] }
       ]
@@ -71,7 +71,7 @@ function documentFor(locale: Locale, page: LegalPage): { title: string; intro: s
       title: "Legal notice", intro: "Publisher, hosting and commercial information for Pressay.", summary: "Pressay is a macOS application published in France by Yodev.", sections: [
         { title: "Publisher", paragraphs: [commonIdentity], bullets: ["SIREN: 803 272 590", "SIRET: 803 272 590 00024", "Business activity: software development — NAF 6201Z", "Contact: hello@press-say.app", "French VAT not applicable under article 293 B of the French Tax Code."] },
         { title: "Publication director", paragraphs: ["The publication director is Yoann Andrieux. Legal, privacy and support requests may be sent to hello@press-say.app."] },
-        { title: "Hosting and providers", paragraphs: ["The website and API are hosted by Vercel. Commercial data is hosted by Neon. Identity is provided by Clerk and payments by Stripe. Voice content is not hosted by these providers in Pressay local/BYOK modes."] },
+        { title: "Hosting and providers", paragraphs: ["The website, API and Better Auth are hosted by Vercel. Account data is hosted by Neon. Google is involved only when you choose Google sign-in, and Stripe processes payments. Voice content is not hosted by these providers in Pressay local/BYOK modes."] },
         { title: "Intellectual property", paragraphs: ["The brand, interface, copy, artwork and Pressay-specific components belong to Yodev or are used under licence. Displayed application marks belong to their owners and do not imply a partnership."] },
         { title: "Reporting", paragraphs: ["To report unlawful content, a vulnerability or a rights issue, email hello@press-say.app with the URL, facts and a contact method. Never send an API key or sensitive dictation."] }
       ]
@@ -126,16 +126,16 @@ function documentFor(locale: Locale, page: LegalPage): { title: string; intro: s
     },
     cookies: fr ? {
       title: "Politique de cookies", intro: "Une liste courte et lisible des cookies nécessaires au fonctionnement du site.", summary: "Pressay n’utilise aucun cookie publicitaire ni fingerprint marketing.", sections: [
-        { title: "Cookies strictement nécessaires", bullets: ["Clerk : session et protection de l’authentification lorsque le compte est activé ;", "pressay_referral : attribution signée, HttpOnly, SameSite=Lax, 30 jours, uniquement après ouverture du programme ;", "préférences de langue ou de sécurité indispensables au parcours."] },
+        { title: "Cookies strictement nécessaires", bullets: ["Pressay / Better Auth : session, challenge passkey, double authentification et validation forte administrative ;", "pressay_referral : attribution signée, HttpOnly, SameSite=Lax, 30 jours, uniquement après ouverture du programme ;", "préférences de langue ou de sécurité indispensables au parcours."] },
         { title: "Mesure et télémétrie", paragraphs: ["Le téléchargement public ne dépose aucun identifiant persistant. La collecte distante de métriques est désactivée par défaut. La télémétrie applicative distante est distincte et nécessite un consentement dans l’app."] },
-        { title: "Gestion", paragraphs: ["Vous pouvez effacer les cookies dans votre navigateur. Bloquer Clerk empêche la connexion ; bloquer le cookie referral empêche l’attribution ; le téléchargement public reste disponible. Un futur outil non essentiel sera désactivé jusqu’à votre choix."] },
+        { title: "Gestion", paragraphs: ["Vous pouvez effacer les cookies dans votre navigateur. Bloquer les cookies Better Auth empêche la connexion ; bloquer le cookie referral empêche l’attribution ; le téléchargement public reste disponible. Un futur outil non essentiel sera désactivé jusqu’à votre choix."] },
         { title: "Contact", paragraphs: ["Pour toute question ou pour signaler un écart entre cette liste et le comportement observé : hello@press-say.app."] }
       ]
     } : {
       title: "Cookie policy", intro: "A short, readable list of cookies required by the site.", summary: "Pressay uses no advertising cookie or marketing fingerprint.", sections: [
-        { title: "Strictly necessary cookies", bullets: ["Clerk: session and authentication protection when accounts are enabled;", "pressay_referral: signed attribution, HttpOnly, SameSite=Lax, 30 days, only after the programme opens;", "language or security preferences required by the journey."] },
+        { title: "Strictly necessary cookies", bullets: ["Pressay / Better Auth: session, passkey challenge, two-factor authentication and administrative step-up;", "pressay_referral: signed attribution, HttpOnly, SameSite=Lax, 30 days, only after the programme opens;", "language or security preferences required by the journey."] },
         { title: "Measurement and telemetry", paragraphs: ["Public downloads set no persistent identifier. Remote metrics collection is off by default. Remote app telemetry is separate and requires in-app consent."] },
-        { title: "Controls", paragraphs: ["You may clear cookies in your browser. Blocking Clerk prevents sign-in; blocking the referral cookie prevents attribution; public download remains available. Any future non-essential tool will remain off until you choose."] },
+        { title: "Controls", paragraphs: ["You may clear cookies in your browser. Blocking Better Auth cookies prevents sign-in; blocking the referral cookie prevents attribution; public download remains available. Any future non-essential tool will remain off until you choose."] },
         { title: "Contact", paragraphs: ["Questions or reports of a mismatch between this list and observed behaviour: hello@press-say.app."] }
       ]
     },
@@ -146,7 +146,7 @@ function documentFor(locale: Locale, page: LegalPage): { title: string; intro: s
         { title: "OpenAI et WhisperKit", paragraphs: ["WhisperKit transcrit localement après téléchargement du modèle. Le mode OpenAI/BYOK utilise votre clé stockée dans le Trousseau et appelle directement le fournisseur. Pressay ne peut ni lire ni récupérer cette clé depuis le support."] },
         { title: "Facturation, essai, codes et referrals", paragraphs: ["Le portail Stripe gère moyen de paiement, factures, changement mensuel/annuel et annulation. Un code gratuit complète le droit effectif sans écraser Stripe. Une récompense referral apparaît après le premier paiement éligible, jamais après une facture à zéro."] },
         { title: "Presse-papiers et récupération", paragraphs: ["Après une insertion réussie, Pressay restaure les formats présents auparavant. Une copie effectuée par vous pendant l’opération gagne. En mode de repli, le résultat reste copié afin que vous puissiez le coller manuellement."] },
-        { title: "Export et suppression", paragraphs: ["L’export local et la suppression de l’historique restent disponibles. La suppression du compte concerne Clerk, Stripe et Neon selon le parcours prévu, mais ne détruit pas silencieusement vos fichiers locaux sans votre action."] },
+        { title: "Export et suppression", paragraphs: ["L’export local et la suppression de l’historique restent disponibles. La suppression du compte concerne l’identité Better Auth, Stripe et Neon selon le parcours prévu, mais ne détruit pas silencieusement vos fichiers locaux sans votre action."] },
         { title: "Diagnostic privacy-safe", bullets: ["Version Pressay et version majeure de macOS ;", "modèle de Mac ou architecture ;", "application et champ cibles ;", "étapes de reproduction ;", "code d’erreur et request ID ;", "ne jamais joindre audio, dictée sensible, clé API, presse-papiers ou fichier privé."] }
       ]
     } : {
@@ -156,7 +156,7 @@ function documentFor(locale: Locale, page: LegalPage): { title: string; intro: s
         { title: "OpenAI and WhisperKit", paragraphs: ["WhisperKit transcribes locally after downloading a model. OpenAI/BYOK stores your key in Keychain and calls the provider directly. Support cannot read or recover that key."] },
         { title: "Billing, trials, codes and referrals", paragraphs: ["Stripe’s portal manages payment method, invoices, monthly/annual switch and cancellation. A free code complements effective access without overwriting Stripe. Referral rewards appear after the first eligible paid invoice, never a zero invoice."] },
         { title: "Clipboard and recovery", paragraphs: ["After successful insertion, Pressay restores previous formats. A copy you make during the operation wins. On fallback, output stays copied for manual paste."] },
-        { title: "Export and deletion", paragraphs: ["Local export and history deletion remain available. Account deletion covers Clerk, Stripe and Neon through the dedicated flow but does not silently destroy local files without your action."] },
+        { title: "Export and deletion", paragraphs: ["Local export and history deletion remain available. Account deletion covers the Better Auth identity, Stripe and Neon through the dedicated flow but does not silently destroy local files without your action."] },
         { title: "Privacy-safe diagnostics", bullets: ["Pressay and major macOS version;", "Mac model or architecture;", "target app and field;", "reproduction steps;", "error code and request ID;", "never attach audio, sensitive dictation, API key, clipboard or private file."] }
       ]
     },
