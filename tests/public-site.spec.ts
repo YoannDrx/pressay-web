@@ -38,7 +38,7 @@ test("English routes expose factual pricing while paid launch is closed", async 
 
 test("download page exposes the public stable and checksum", async ({ page }) => {
   await page.goto("/fr/download");
-  await expect(page.getByText(/^v1\.2\.4$/)).toBeVisible();
+  await expect(page.getByText(/^v1\.2\.6$/)).toBeVisible();
   await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute("href", /Pressay\.dmg\.sha256$/);
 });
 
@@ -58,4 +58,31 @@ test("Clerk sign-in callback is handled by the catch-all route", async ({ page }
 test("local sign-up route is available", async ({ page }) => {
   await page.goto("/sign-up");
   await expect(page.getByRole("heading", { name: "Inscription bientôt disponible." })).toBeVisible();
+});
+
+test("a valid referral route signs a private cookie and preserves it on a transient attribution failure", async ({ page }) => {
+  await page.goto("/r/PABCDEF1234567");
+  await expect(page).toHaveURL(/\/(?:fr|en)\?ref=PABCDEF1234567$/);
+  const cookie = (await page.context().cookies()).find((candidate) => candidate.name === "pressay_referral");
+  expect(cookie?.httpOnly).toBe(true);
+  expect(cookie?.sameSite).toBe("Lax");
+  await page.context().clearCookies({ name: "pressay_referral" });
+  await page.context().addCookies([{
+    name: "pressay_referral",
+    value: cookie!.value,
+    url: "http://localhost:31971",
+    httpOnly: true,
+    secure: false,
+    sameSite: "Lax"
+  }]);
+
+  const attributionStatus = await page.evaluate(async () => (await fetch("/api/referral/attribute", { method: "POST" })).status);
+  expect(attributionStatus).toBe(503);
+  expect((await page.context().cookies()).some((candidate) => candidate.name === "pressay_referral")).toBe(true);
+});
+
+test("an invalid referral route does not persist a cookie", async ({ page }) => {
+  await page.goto("/r/INVALID-CODE");
+  await expect(page).toHaveURL(/\/fr$/);
+  expect((await page.context().cookies()).some((candidate) => candidate.name === "pressay_referral")).toBe(false);
 });
