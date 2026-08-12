@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const isRemoteEnvironment = Boolean(process.env.PLAYWRIGHT_BASE_URL);
+const isCommercialLaunchEnabled = process.env.PLAYWRIGHT_COMMERCIAL_LAUNCH === "true";
 
 test("French landing exposes the product contract and metadata", async ({ page }) => {
   const response = await page.goto("/fr");
@@ -34,7 +35,7 @@ test("English routes expose factual pricing and the current launch state", async
   await expect(page.getByRole("heading", { level: 1 })).toContainText("generous Free");
   await expect(page.getByRole("row", { name: /Pressay/ })).toContainText("€69");
   await expect(page.getByRole("row", { name: /Superwhisper/ })).toContainText("$249.99");
-  if (isRemoteEnvironment) {
+  if (isCommercialLaunchEnabled) {
     await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(0);
     expect(await page.getByRole("button", { name: /€69|€7\.99|€149/ }).count()).toBeGreaterThan(0);
   } else {
@@ -45,7 +46,7 @@ test("English routes expose factual pricing and the current launch state", async
 
 test("download page exposes the public stable and checksum", async ({ page }) => {
   await page.goto("/fr/download");
-  await expect(page.getByText(/^v1\.2\.6$/)).toBeVisible();
+  await expect(page.getByText(/^v1\.2\.7$/)).toBeVisible();
   await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute("href", /Pressay\.dmg\.sha256$/);
 });
 
