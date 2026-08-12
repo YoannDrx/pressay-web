@@ -7,7 +7,8 @@ import { commercialIsConfigured, pressayAPI } from "@/lib/pressay-api";
 type Entitlement = { effectivePlan: string; effectiveSource: string; status: string; grantEnd: string | null; subscriptionEnd: string | null; offlineValidUntil: string; deviceLimit: number; timeline: Array<{ source: string; plan: string; endsAt: string | null }> };
 type Account = { account: { id: string; email: string; display_name: string | null; created_at: string } };
 type Device = { id: string; platform: string; app_version: string; architecture: string; distribution_channel: string; last_seen_at: string };
-type Referral = { link: string; signups: number; conversions: number; rewards: unknown[] };
+type ReferralReward = { id: string; side: string; reward_kind: string; status: string; applied_at: string | null; reversed_at: string | null; guestPassLink?: string };
+type Referral = { link: string; signups: number; conversions: number; rewards: ReferralReward[] };
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +28,8 @@ export default async function AccountPage() {
     <section className="account-grid">
       <article className="account-card account-plan"><span className="mono-label">DROIT EFFECTIF</span><div className="account-plan-name"><h2>{entitlement.effectivePlan}</h2><span>{entitlement.status}</span></div><p>Source : {entitlement.effectiveSource}. Le grant complète Stripe sans écraser l’abonnement.</p><dl><dt>Fin du grant</dt><dd>{date(entitlement.grantEnd)}</dd><dt>Fin de l’abonnement</dt><dd>{date(entitlement.subscriptionEnd)}</dd><dt>Grâce hors ligne</dt><dd>{date(entitlement.offlineValidUntil)}</dd></dl><div className="account-actions"><PortalButton>Gérer la facturation</PortalButton><Link className="button" href="/fr/pricing">Changer d’offre</Link></div></article>
       <article className="account-card"><span className="mono-label">APPAREILS / {devices.devices.length} SUR {entitlement.deviceLimit}</span><h2>Tes Mac.</h2><div className="account-device-list">{devices.devices.map((device) => <div key={device.id}><div><strong>Pressay {device.app_version}</strong><small>{device.architecture} · {device.distribution_channel} · vu {date(device.last_seen_at)}</small></div><DeviceRevokeButton id={device.id} /></div>)}</div>{!devices.devices.length ? <p>Aucun appareil enregistré.</p> : null}</article>
-      {referral ? <ReferralCard link={referral.link} signups={referral.signups} conversions={referral.conversions} /> : <article className="account-card"><span className="mono-label">PARRAINAGE</span><h2>Bientôt disponible.</h2><p>Le programme est activé progressivement après validation Stripe.</p></article>}
-      <article className="account-card"><span className="mono-label">CODE D’ACCÈS</span><h2>Tu as reçu un code ?</h2><p>Il ajoute un droit favorable sans modifier un abonnement Stripe actif.</p><AccessClaimForm /></article>
+      {referral ? <ReferralCard link={referral.link} signups={referral.signups} conversions={referral.conversions} rewards={referral.rewards} /> : <article className="account-card"><span className="mono-label">PARRAINAGE</span><h2>Programme en préparation.</h2><p>Les liens ne sont pas encore émis : le checkout et les obligations Stripe/Tax doivent d’abord être validés. Rien à configurer de ton côté avant l’ouverture.</p></article>}
+      <article className="account-card"><span className="mono-label">CODE D’ACCÈS</span><h2>Tu as reçu un code ?</h2><p>Il ne remplace ni ne raccourcit un abonnement Stripe. Le code est consommé uniquement s’il améliore réellement ton accès ; une réduction Stripe utilise un code promotionnel au checkout.</p><AccessClaimForm /></article>
     </section>
     <section className="account-privacy"><strong>Ce que Pressay ne reçoit jamais</strong><p>Audio, dictée, historique local, texte sélectionné, fichiers, presse-papiers, prompts privés et clé BYOK restent absents de ce compte.</p><Link href="/fr/privacy">Lire la politique de confidentialité →</Link><DeleteAccountButton /></section>
   </main>;
