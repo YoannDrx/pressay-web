@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AccessClaimForm, DeleteAccountButton, DeviceRevokeButton, ReferralAttributor, ReferralCard } from "@/components/account-actions";
 import { PortalButton } from "@/components/portal-button";
 import { commercialIsConfigured, pressayAPI } from "@/lib/pressay-api";
+import { getWebIdentity } from "@/lib/server-identity";
 
 type Entitlement = { effectivePlan: string; effectiveSource: string; status: string; grantEnd: string | null; subscriptionEnd: string | null; offlineValidUntil: string; deviceLimit: number; timeline: Array<{ source: string; plan: string; endsAt: string | null }> };
 type Account = { account: { id: string; email: string; display_name: string | null; created_at: string } };
@@ -14,8 +15,11 @@ export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
   if (!commercialIsConfigured()) return <AccountUnavailable />;
+  if (!await getWebIdentity()) redirect("/sign-in?redirect_url=/account");
   const bootstrap = await pressayAPI("accounts/bootstrap", { method: "POST" });
-  if (bootstrap.status === 401) redirect("/sign-in?redirect_url=/account");
+  // At this point the browser session is valid. A 401 is an API trust/config
+  // failure, not a reason to send the user through Google again in a loop.
+  if (bootstrap.status === 401) return <AccountError />;
   if (!bootstrap.ok && bootstrap.status !== 409) return <AccountError />;
   const [meResponse, entitlementResponse, devicesResponse, referralResponse] = await Promise.all([
     pressayAPI("me"), pressayAPI("entitlements"), pressayAPI("devices"), pressayAPI("referrals/me")

@@ -160,4 +160,8 @@ test("remote staging exposes Better Auth and protects account step-up", async ({
 
   await page.goto("/sign-in");
   await expect(page.getByRole("button", { name: /Google/i })).toBeVisible();
+  await expect(page.getByText("Aucun code d’accès n’est nécessaire.")).toBeVisible();
+  await expect(page.getByRole("button", { name: /passkey/i })).toBeHidden();
+  await page.getByText("Autre méthode", { exact: true }).click();
+  await expect(page.getByRole("button", { name: /passkey/i })).toBeVisible();
 });

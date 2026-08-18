@@ -10,15 +10,18 @@ export function BetterAuthSignIn({ callbackURL }: { callbackURL: string }) {
   async function signInWithGoogle() {
     setPending("google");
     setMessage("");
-    const result = await authClient.signIn.social({
-      provider: "google",
-      callbackURL,
-      errorCallbackURL: `/sign-in?error=oauth&redirect_url=${encodeURIComponent(callbackURL)}`
-    });
-    if (result.error) {
+    try {
+      const result = await authClient.signIn.social({
+        provider: "google",
+        callbackURL,
+        errorCallbackURL: `/sign-in?error=oauth&redirect_url=${encodeURIComponent(callbackURL)}`
+      });
+      if (!result.error) return;
       setMessage("La connexion Google n’a pas abouti. Réessaie dans quelques instants.");
-      setPending(null);
+    } catch {
+      setMessage("Impossible d’ouvrir Google. Vérifie ta connexion puis réessaie.");
     }
+    setPending(null);
   }
 
   async function signInWithPasskey() {
@@ -39,14 +42,18 @@ export function BetterAuthSignIn({ callbackURL }: { callbackURL: string }) {
     <div className="auth-placeholder auth-provider-card">
       <span className="mono-label">COMPTE PRESSAY</span>
       <h1>Connexion.</h1>
-      <p>Google crée ou retrouve ton compte. Une clé d’accès peut ensuite remplacer ce parcours sur cet appareil.</p>
+      <p>Google crée ou retrouve ton compte. Aucun code d’accès n’est nécessaire.</p>
       <div className="auth-provider-actions">
         <button className="button button-primary" disabled={pending !== null} onClick={signInWithGoogle}>
           {pending === "google" ? "Connexion…" : "Continuer avec Google"}
         </button>
-        <button className="button" disabled={pending !== null} onClick={signInWithPasskey}>
-          {pending === "passkey" ? "Vérification…" : "Utiliser une clé d’accès"}
-        </button>
+        <details className="auth-alternative">
+          <summary>Autre méthode</summary>
+          <p>Uniquement si tu as déjà configuré une passkey Pressay avec Touch ID sur cet appareil.</p>
+          <button className="button" disabled={pending !== null} onClick={signInWithPasskey}>
+            {pending === "passkey" ? "Vérification…" : "Se connecter avec une passkey"}
+          </button>
+        </details>
       </div>
       {message ? <output className="auth-message" role="alert">{message}</output> : null}
       <small>Session sécurisée, cookies strictement nécessaires uniquement.</small>
