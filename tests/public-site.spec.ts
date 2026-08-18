@@ -75,9 +75,11 @@ test("English routes expose factual pricing and the current launch state", async
   }
 });
 
-test("download page exposes the public stable and checksum", async ({ page }) => {
+test("download page exposes the public release channel and checksum", async ({ page }) => {
   await page.goto("/fr/download");
-  await expect(page.getByText(/^v1\.2\.7$/)).toBeVisible();
+  await expect(page.getByText(/^v2\.0\.0-beta\.1$/)).toBeVisible();
+  await expect(page.getByText("PUBLIC BETA")).toBeVisible();
+  await expect(page.getByText(/Apple Silicon · arm64/)).toBeVisible();
   await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute("href", /Pressay\.dmg\.sha256$/);
 });
 
