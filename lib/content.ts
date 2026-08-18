@@ -12,7 +12,7 @@ export const copy = {
     seePricing: "Voir les tarifs",
     proofs: [
       ["Partout", "Mail, Slack, navigateur, IDE et terminal."],
-      ["Local ou BYOK", "WhisperKit sur ton Mac, ou ta propre clé API."],
+      ["Local par défaut", "Trois modèles locaux, puis Apple Intelligence, BYOK ou Cloud sur choix explicite."],
       ["Réversible", "Cible vérifiée, aperçu éditable, presse-papiers préservé."]
     ],
     demoTitle: "La cible reste visible.",
@@ -33,7 +33,7 @@ export const copy = {
     seePricing: "See pricing",
     proofs: [
       ["Everywhere", "Mail, Slack, browsers, IDEs and terminals."],
-      ["Local or BYOK", "WhisperKit on your Mac, or your own API key."],
+      ["Local by default", "Three local models, then Apple Intelligence, BYOK or Cloud by explicit choice."],
       ["Reversible", "Verified target, editable preview, preserved clipboard."]
     ],
     demoTitle: "The target stays visible.",
@@ -54,25 +54,16 @@ export const plans = [
     monthly: "0 €",
     detailFr: "Sans compte obligatoire",
     detailEn: "No account required",
-    featuresFr: ["Dictée locale/BYOK illimitée", "Modes Fidèle, Propre et Message", "Historique chiffré 24 h", "Export et suppression toujours gratuits"],
-    featuresEn: ["Unlimited local/BYOK dictation", "Faithful, Clean and Message modes", "24-hour encrypted history", "Export and deletion always free"]
+    featuresFr: ["Dictée locale illimitée", "Raccourci, Voice Bar et insertion", "Dictionnaire de base", "Historique local facultatif"],
+    featuresEn: ["Unlimited local dictation", "Shortcut, Voice Bar and insertion", "Basic dictionary", "Optional local history"]
   },
   {
     code: "pro_byok",
-    name: "Pro BYOK",
+    name: "Pro",
     monthly: "7,99 € / mois",
     detailFr: "69 € / an · essai 14 jours sans carte",
     detailEn: "€69 / year · 14-day trial, no card",
-    featuresFr: ["Tous les modes et modes personnalisés", "Profils par application", "Historique enrichi 30 jours", "Voice Inbox et outils développeur livrés", "Jusqu’à 3 Mac"],
-    featuresEn: ["All modes and custom modes", "Per-app profiles", "30-day enriched history", "Delivered Voice Inbox and developer tools", "Up to 3 Macs"]
-  },
-  {
-    code: "lifetime_byok",
-    name: "Lifetime BYOK",
-    monthly: "149 €",
-    detailFr: "Offre Founding, paiement unique",
-    detailEn: "Founding offer, one-time payment",
-    featuresFr: ["Même périmètre local/BYOK que Pro", "Aucun abonnement", "Cloud géré, sync hébergée et Teams exclus"],
-    featuresEn: ["Same local/BYOK scope as Pro", "No subscription", "Managed cloud, hosted sync and Teams excluded"]
+    featuresFr: ["Commandes Voice Bar avancées", "Modes et profils par application", "Apple Intelligence et BYOK", "Synchronisation chiffrée", "Quota Pressay Cloud"],
+    featuresEn: ["Advanced Voice Bar commands", "Modes and per-app profiles", "Apple Intelligence and BYOK", "Encrypted sync", "Pressay Cloud allowance"]
   }
 ] as const;

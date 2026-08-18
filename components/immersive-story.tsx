@@ -42,15 +42,15 @@ export function ImmersiveStory({ locale }: { locale: Locale }) {
   }, []);
 
   const chapters = fr ? [
-    ["01 / PARLE", "La pensée devient texte.", "Maintiens Fn, parle normalement, puis relâche. Pressay transcrit sans te sortir de ce que tu fais."],
-    ["02 / CIBLE", "Il sait où écrire.", "L’application, la fenêtre et le champ restent visibles. La cible est revérifiée au dernier instant."],
-    ["03 / MÉMOIRE", "Ton presse-papiers revient.", "Pressay colle le résultat, puis restitue tous les formats copiés avant la dictée. Si tu copies entre-temps, ta copie gagne."],
-    ["04 / CONTEXTE", "Rien d’implicite.", "Tu vois exactement ce qui peut quitter le Mac. Le local reste local, et chaque source cloud est autorisée explicitement."],
+    ["01 / PRESS", "Le signal s’ouvre.", "Maintiens ton raccourci. L’icône menu bar et la Voice Bar passent ensemble de repos à écoute."],
+    ["02 / SPEAK", "Parle sans changer d’app.", "La waveform confirme que le micro écoute. L’application cible et la route Local restent visibles."],
+    ["03 / TRANSFORM", "Donne la bonne forme.", "Liste, email, message, correction ou mode temporaire : les commandes de texte sont explicites et réversibles."],
+    ["04 / ACT", "Le texte arrive. Pas de surprise.", "Pressay vérifie la cible, insère, confirme puis revient au repos. Toute route externe reste opt-in."],
   ] : [
-    ["01 / SPEAK", "Thought becomes text.", "Hold Fn, speak naturally, then release. Pressay transcribes without pulling you away from your work."],
-    ["02 / TARGET", "It knows where to write.", "The app, window and field stay visible. The target is verified again at the very last moment."],
-    ["03 / MEMORY", "Your clipboard comes back.", "Pressay pastes the result, then restores every format copied before dictation. If you copy meanwhile, your copy wins."],
-    ["04 / CONTEXT", "Nothing is implicit.", "You see exactly what may leave your Mac. Local stays local, and every cloud source is explicitly allowed."],
+    ["01 / PRESS", "The signal opens.", "Hold your shortcut. The menu bar icon and Voice Bar move together from idle to listening."],
+    ["02 / SPEAK", "Talk without switching apps.", "The waveform confirms capture. The target app and Local route remain visible."],
+    ["03 / TRANSFORM", "Give words the right shape.", "List, email, message, correction or temporary mode: text commands stay explicit and reversible."],
+    ["04 / ACT", "Text lands. No surprise.", "Pressay verifies the target, inserts, confirms, then returns to idle. Every external route stays opt-in."],
   ];
 
   return <section className="scroll-story" ref={rootRef} data-scene="0" data-testid="scroll-story">
@@ -96,24 +96,24 @@ function ProductStage({ locale }: { locale: Locale }) {
     <div className="pressay-hud">
       <kbd>fn</kbd>
       <div className="hud-wave">{bars.map((height, index) => <i key={index} style={{ "--bar": `${height}%`, "--delay": `${index * -37}ms` } as CSSProperties} />)}</div>
-      <div><strong>{fr ? "J’écoute" : "Listening"}</strong><span>{fr ? "Relâche pour écrire" : "Release to write"}</span></div>
+      <div><strong>{fr ? "Écoute" : "Listening"}</strong><span>LOCAL · {fr ? "Relâche pour écrire" : "Release to write"}</span></div>
     </div>
 
-    <div className="target-proof"><span className="proof-pulse" /><small>TARGET VERIFIED</small><strong>Mail · Compose.Body</strong><em>✓</em></div>
+    <div className="target-proof"><span className="proof-pulse" /><small>SIGNAL CAPTURED</small><strong>Mail · Local STT</strong><em>✓</em></div>
 
-    <div className="clipboard-card clipboard-before"><span>BEFORE</span><strong>Quarterly-report.pdf</strong><small>PDF · RTF · PNG</small></div>
+    <div className="clipboard-card clipboard-before"><span>VOICE COMMAND</span><strong>{fr ? "liste à puces" : "bullet list"}</strong><small>SAFE TEXT · LOCAL</small></div>
     <div className="clipboard-transfer" aria-hidden="true"><i /><i /><i /></div>
-    <div className="clipboard-card clipboard-after"><span>RESTORED</span><strong>Quarterly-report.pdf</strong><small>{fr ? "3 formats intacts" : "3 formats intact"}</small></div>
+    <div className="clipboard-card clipboard-after"><span>TRANSFORMED</span><strong>• Local first · • BYOK optional</strong><small>{fr ? "aperçu déterministe" : "deterministic preview"}</small></div>
 
     <div className="consent-panel">
-      <div><span>CONTEXT MANIFEST</span><em>LOCAL / BYOK</em></div>
+      <div><span>VOICE COMMAND INTENT</span><em>TEXT / SAFE</em></div>
       <dl>
-        <dt>{fr ? "Audio" : "Audio"}</dt><dd>LOCAL</dd>
-        <dt>{fr ? "Application" : "Application"}</dt><dd>Mail</dd>
-        <dt>{fr ? "Texte sélectionné" : "Selected text"}</dt><dd className="blocked">DENIED</dd>
-        <dt>{fr ? "Stocker la réponse" : "Store response"}</dt><dd>false</dd>
+        <dt>{fr ? "Intention" : "Intent"}</dt><dd>FORMAT_LIST</dd>
+        <dt>{fr ? "Route" : "Route"}</dt><dd>LOCAL</dd>
+        <dt>{fr ? "Risque" : "Risk"}</dt><dd>SAFE_TEXT</dd>
+        <dt>{fr ? "Confirmation" : "Confirmation"}</dt><dd>false</dd>
       </dl>
-      <div className="consent-seal"><i /> {fr ? "AUTORISATION EXPLICITE" : "EXPLICIT CONSENT"}</div>
+      <div className="consent-seal"><i /> {fr ? "CIBLE VÉRIFIÉE · INSÉRÉ" : "TARGET VERIFIED · INSERTED"}</div>
     </div>
   </div>;
 }

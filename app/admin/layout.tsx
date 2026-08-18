@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { commercialIsConfigured, pressayAPI } from "@/lib/pressay-api";
@@ -20,7 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!access.ok) return <main className="admin-gate"><div><span className="mono-label">ACCÈS REFUSÉ</span><h1>Compte non administrateur</h1><p>Le propriétaire initial est attribué une seule fois à l’identité vérifiée correspondant à yoann.andrieux@gmail.com.</p><Link className="button" href="/account">Mon compte</Link></div></main>;
   return <div className="admin-shell">
     <aside className="admin-sidebar">
-      <Link className="admin-brand" href="/admin" prefetch={false}><span>p</span><strong>Pressay</strong><small>operations</small></Link>
+      <Link className="admin-brand" href="/admin" prefetch={false}><span><Image src="/logo.svg" width={34} height={34} alt="" /></span><strong>Pressay</strong><small>operations</small></Link>
       <nav>{navigation.map(([href, label]) => <Link href={href} key={href} prefetch={false}>{label}</Link>)}</nav>
       <div className="admin-privacy"><i />Metadata only<strong>Jamais d’audio ni de dictée</strong></div>
       {identityProvider() === "better-auth" ? <AdminStepUp /> : null}

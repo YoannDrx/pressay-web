@@ -5,12 +5,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://press-say.app"),
-  title: { default: "Pressay — Dictée contrôlable pour macOS", template: "%s · Pressay" },
-  description: "Votre voix, partout où vous écrivez. Dictée locale ou BYOK, cible vérifiée et presse-papiers préservé sur macOS.",
+  title: { default: "Pressay — Le Voice OS local du Mac", template: "%s · Pressay" },
+  description: "Dictez, transformez et corrigez dans chaque app avec une route de traitement visible et le local par défaut.",
   applicationName: "Pressay",
   alternates: { canonical: "/fr", languages: { "fr-FR": "/fr", "en-US": "/en" } },
-  openGraph: { type: "website", siteName: "Pressay", title: "Pressay — Votre voix, partout où vous écrivez.", description: "La dictée macOS qui rend la cible, le contexte et la réversibilité visibles.", url: "https://press-say.app/fr" },
-  twitter: { card: "summary_large_image", title: "Pressay", description: "Controlled voice dictation for macOS." },
+  openGraph: { type: "website", siteName: "Pressay", title: "Pressay — Votre Mac devient vocal.", description: "Le Voice OS local qui rend chaque route de traitement visible.", url: "https://press-say.app/fr" },
+  twitter: { card: "summary_large_image", title: "Pressay", description: "The local Voice OS for macOS." },
   icons: { icon: "/logo.svg" }
 };
 

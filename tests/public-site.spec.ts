@@ -5,7 +5,7 @@ const isCommercialLaunchEnabled = process.env.PLAYWRIGHT_COMMERCIAL_LAUNCH === "
 
 test("French landing exposes the product contract and metadata", async ({ page }) => {
   const response = await page.goto("/fr");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Votre voix");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Votre Mac");
   await expect(page.getByText("presse-papiers", { exact: false }).first()).toBeVisible();
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
   expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
@@ -21,6 +21,37 @@ test("landing navigation and compatibility marquee are accessible", async ({ pag
   await expect(page.getByRole("link", { name: "GitHub" })).toHaveCount(0);
 });
 
+test("desktop secure-input help URL resolves to localized private guidance", async ({
+  page,
+}) => {
+  const response = await page.goto("/support/secure-input");
+  expect(response?.status()).toBe(200);
+  await expect(page).toHaveURL(/\/(fr|en)\/support\/secure-input$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: /secret|hors de portée/i }),
+  ).toBeVisible();
+  await expect(page.getByText(/Keychain|Trousseau macOS/).first()).toBeVisible();
+});
+
+test("processing routes stay explicit and keyboard operable", async ({ page }) => {
+  await page.goto("/en");
+  const routes = page.getByRole("group", { name: "Processing route" });
+  await expect(routes.getByRole("button")).toHaveCount(4);
+  await expect(routes.getByRole("button", { name: "Local" })).toHaveAttribute("aria-pressed", "true");
+  await routes.getByRole("button", { name: "BYOK" }).click();
+  await expect(routes.getByRole("button", { name: "BYOK" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("Your key stays in Keychain and the Voice Bar names the selected provider.", { exact: true })).toBeVisible();
+});
+
+test("immersive motion has a complete reduced-motion fallback", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/en");
+  await expect(page.locator("[data-reveal]").first()).toHaveCSS("opacity", "1");
+  await expect(page.locator(".route-console-signal i").first()).toHaveCSS("animation-name", "none");
+  await expect(page.locator(".story-sticky")).toHaveCSS("position", "relative");
+  await expect(page.locator(".story-progress")).toHaveCSS("display", "none");
+});
+
 test("expanded legal pages expose identity, privacy and withdrawal routes", async ({ page }) => {
   await page.goto("/fr/legal");
   await expect(page.getByText("803 272 590 00024")).toBeVisible();
@@ -32,15 +63,15 @@ test("expanded legal pages expose identity, privacy and withdrawal routes", asyn
 
 test("English routes expose factual pricing and the current launch state", async ({ page }) => {
   await page.goto("/en/pricing");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("generous Free");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Local stays free");
   await expect(page.getByRole("row", { name: /Pressay/ })).toContainText("€69");
   await expect(page.getByRole("row", { name: /Superwhisper/ })).toContainText("$249.99");
   if (isCommercialLaunchEnabled) {
     await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(0);
-    expect(await page.getByRole("button", { name: /€69|€7\.99|€149/ }).count()).toBeGreaterThan(0);
+    expect(await page.getByRole("button", { name: /€69|€7\.99/ }).count()).toBeGreaterThan(0);
   } else {
-    await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(2);
-    await expect(page.getByRole("button", { name: /€69|€7\.99|€149/ })).toHaveCount(0);
+    await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(1);
+    await expect(page.getByRole("button", { name: /€69|€7\.99/ })).toHaveCount(0);
   }
 });
 

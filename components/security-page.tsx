@@ -4,14 +4,14 @@ import type { Locale } from "@/lib/content";
 export function SecurityPage({ locale }: { locale: Locale }) {
   const fr = locale === "fr";
   const cards = fr ? [
-    ["Local signifie local", "WhisperKit transcrit sur le Mac. Aucune voix ne passe par un serveur Pressay."],
+    ["Local signifie local", "Le modèle de transcription tourne sur le Mac. Aucune voix ne passe par un serveur Pressay."],
     ["BYOK est direct", "Ta clé reste dans le Trousseau et les requêtes vont directement au fournisseur choisi."],
     ["Contexte consenti", "Le manifeste cloud montre chaque source et son contenu exact avant envoi."],
     ["Cible prouvée", "Application, fenêtre, champ et sélection sont revérifiés avant toute écriture."],
     ["Repli récupérable", "Si l’insertion échoue, le résultat reste copié. Si elle réussit, ton ancien presse-papiers revient."],
     ["Suppression réelle", "Historique, Inbox et compte produit disposent de parcours d’export et de suppression."]
   ] : [
-    ["Local means local", "WhisperKit transcribes on the Mac. No voice passes through a Pressay server."],
+    ["Local means local", "The transcription model runs on the Mac. No voice passes through a Pressay server."],
     ["BYOK is direct", "Your key stays in Keychain and requests go straight to your chosen provider."],
     ["Consented context", "The cloud manifest shows every source and its exact content before sending."],
     ["Proven target", "App, window, field and selection are checked again before any write."],
