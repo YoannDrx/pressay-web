@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { SignJWT } from "jose";
+import { auth } from "@/lib/auth";
 import { identityProvider } from "@/lib/auth-env";
 import { getWebIdentity, type WebIdentity } from "@/lib/server-identity";
 
@@ -46,6 +47,31 @@ export async function pressayAPI(
 }
 
 async function createInternalAPIToken(identity: WebIdentity): Promise<string | null> {
+  // Better Auth already owns the asymmetric signing keys advertised by the
+  // public JWKS endpoint and trusted by the macOS/API OAuth path. Reuse that
+  // trust chain for the server-side account proxy instead of depending on a
+  // second shared secret that can drift between Vercel projects.
+  if (identity.provider === "better-auth") {
+    try {
+      const signed = await auth.api.signJWT({
+        body: {
+          payload: {
+            sub: identity.subject,
+            email: identity.email,
+            email_verified: identity.emailVerified,
+            name: identity.name,
+            sid: identity.sessionID,
+            pressay_step_up_at: identity.stepUpAt,
+            pressay_step_up_method: identity.stepUpMethod
+          }
+        }
+      });
+      return signed.token;
+    } catch {
+      return null;
+    }
+  }
+
   const secret = validInternalJWTSecret();
   if (!secret) return null;
   return new SignJWT({
