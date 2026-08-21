@@ -3,23 +3,29 @@
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
-export function BetterAuthSignIn({ callbackURL }: { callbackURL: string }) {
-  const [pending, setPending] = useState<"google" | "passkey" | null>(null);
+export function BetterAuthSignIn({
+  callbackURL,
+  appleEnabled
+}: {
+  callbackURL: string;
+  appleEnabled: boolean;
+}) {
+  const [pending, setPending] = useState<"google" | "apple" | "passkey" | null>(null);
   const [message, setMessage] = useState("");
 
-  async function signInWithGoogle() {
-    setPending("google");
+  async function signInWithSocial(provider: "google" | "apple") {
+    setPending(provider);
     setMessage("");
     try {
       const result = await authClient.signIn.social({
-        provider: "google",
+        provider,
         callbackURL,
         errorCallbackURL: `/sign-in?error=oauth&redirect_url=${encodeURIComponent(callbackURL)}`
       });
       if (!result.error) return;
-      setMessage("La connexion Google n’a pas abouti. Réessaie dans quelques instants.");
+      setMessage(`La connexion ${provider === "apple" ? "Apple" : "Google"} n’a pas abouti. Réessaie dans quelques instants.`);
     } catch {
-      setMessage("Impossible d’ouvrir Google. Vérifie ta connexion puis réessaie.");
+      setMessage(`Impossible d’ouvrir ${provider === "apple" ? "Apple" : "Google"}. Vérifie ta connexion puis réessaie.`);
     }
     setPending(null);
   }
@@ -42,11 +48,16 @@ export function BetterAuthSignIn({ callbackURL }: { callbackURL: string }) {
     <div className="auth-placeholder auth-provider-card">
       <span className="mono-label">COMPTE PRESSAY</span>
       <h1>Connexion.</h1>
-      <p>Google crée ou retrouve ton compte. Aucun code d’accès n’est nécessaire.</p>
+      <p>Google ou Apple crée ou retrouve ton compte. Aucun code d’accès n’est nécessaire.</p>
       <div className="auth-provider-actions">
-        <button className="button button-primary" disabled={pending !== null} onClick={signInWithGoogle}>
+        <button className="button button-primary" disabled={pending !== null} onClick={() => signInWithSocial("google")}>
           {pending === "google" ? "Connexion…" : "Continuer avec Google"}
         </button>
+        {appleEnabled ? (
+          <button className="button auth-apple-button" disabled={pending !== null} onClick={() => signInWithSocial("apple")}>
+            {pending === "apple" ? "Connexion…" : "Continuer avec Apple"}
+          </button>
+        ) : null}
         <details className="auth-alternative">
           <summary>Autre méthode</summary>
           <p>Uniquement si tu as déjà configuré une passkey Pressay avec Touch ID sur cet appareil.</p>

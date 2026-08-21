@@ -22,12 +22,12 @@ export function Pricing({ locale, compact = false }: { locale: Locale; compact?:
           <span className="button button-disabled full" aria-disabled="true">{locale === "fr" ? "Ouverture prochaine" : "Coming soon"}</span> :
         <div className="price-actions">
           <CheckoutButton plan="pro_byok" interval="annual" locale={locale}>
-            {locale === "fr" ? "Démarrer l’essai — puis 69 €/an" : "Start trial — then €69/year"}
+            {locale === "fr" ? "Choisir Pro annuel — 69 €/an" : "Choose annual Pro — €69/year"}
           </CheckoutButton>
           <CheckoutButton plan="pro_byok" interval="monthly" variant="secondary" locale={locale}>
             {locale === "fr" ? "Ou 7,99 €/mois" : "Or €7.99/month"}
           </CheckoutButton>
         </div>}
     </article>)}
-  </div><p className="pricing-legal-note">{locale === "fr" ? "Prix finaux affichés avant commande. TVA non applicable, article 293 B du CGI. Les offres payantes ouvriront après validation des obligations de vente à distance." : "Final prices are shown before purchase. French VAT exemption under article 293 B. Paid plans will open after distance-selling obligations are validated."}</p></>;
+  </div><p className="pricing-legal-note">{locale === "fr" ? "Prix, taxes applicables et renouvellement affichés avant commande. Les offres payantes ouvriront après validation fiscale et des obligations de vente à distance." : "Final price, applicable taxes and renewal are shown before purchase. Paid plans will open after tax and distance-selling requirements are validated."}</p></>;
 }

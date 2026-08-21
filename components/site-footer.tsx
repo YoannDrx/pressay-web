@@ -12,6 +12,6 @@ export function SiteFooter({ locale }: { locale: Locale }) {
       <Link href={`/${locale}/withdrawal`}>{locale === "fr" ? "Rétractation" : "Withdrawal"}</Link>
       <Link href={`/${locale}/support`}>Support</Link>
     </div>
-    <small>© {new Date().getFullYear()} Yodev · {locale === "fr" ? "Pressay est édité et développé par Yodev" : "Pressay is published and developed by Yodev"} · macOS 14+</small>
+    <small>© {new Date().getFullYear()} YoDev · {locale === "fr" ? "Pressay est édité et développé par YoDev" : "Pressay is published and developed by YoDev"} · macOS 14+</small>
   </footer>;
 }

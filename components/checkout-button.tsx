@@ -10,8 +10,8 @@ export function CheckoutButton({
   variant = "primary",
   children
 }: {
-  plan: "pro_byok" | "lifetime_byok";
-  interval: "monthly" | "annual" | "lifetime";
+  plan: "pro_byok";
+  interval: "monthly" | "annual";
   locale: "fr" | "en";
   variant?: "primary" | "secondary";
   children: React.ReactNode;

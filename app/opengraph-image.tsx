@@ -3,38 +3,57 @@ import { ImageResponse } from "next/og";
 export const alt = "Pressay — Your Mac, now speaks your language.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-const SIGNAL_BARS = [10, 24, 42, 18, 10] as const;
-
 function SignalMark() {
   return (
-    <span
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 64 64"
+      xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
       style={{
-        width: 52,
-        height: 52,
-        borderRadius: 999,
-        background:
-          "linear-gradient(145deg, #35c7ff 0%, #318cff 48%, #6c5cff 100%)",
-        boxShadow: "inset 0 0 0 4px rgba(255,255,255,.12)",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 4,
       }}
     >
-      {SIGNAL_BARS.map((height, index) => (
-        <i
-          key={index}
-          style={{
-            width: 4,
-            height,
-            borderRadius: 99,
-            background: "#ffffff",
-            display: "flex",
-          }}
-        />
-      ))}
-    </span>
+      <defs>
+        <linearGradient
+          id="og-signal"
+          x1="10"
+          y1="8"
+          x2="54"
+          y2="58"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#35C7FF" />
+          <stop offset="0.46" stopColor="#318CFF" />
+          <stop offset="1" stopColor="#6C5CFF" />
+        </linearGradient>
+      </defs>
+      <circle cx="32" cy="32" r="30" fill="url(#og-signal)" />
+      <circle
+        cx="32"
+        cy="32"
+        r="25.5"
+        fill="none"
+        stroke="#FFFFFF"
+        strokeOpacity="0.19"
+      />
+      <path
+        d="M18.5 25.5C21.7 20.8 26.5 18.5 32 18.5s10.3 2.3 13.5 7M18.5 38.5C21.7 43.2 26.5 45.5 32 45.5s10.3-2.3 13.5-7"
+        fill="none"
+        stroke="#FFFFFF"
+        strokeOpacity="0.54"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M18.5 32h3.2m3.1-5.7v11.4m5.1-16v20.6m5.1-10.9v1.2m4.7-.6h4.1"
+        fill="none"
+        stroke="#FFFFFF"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 

@@ -2,8 +2,10 @@ import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { jwt, twoFactor } from "better-auth/plugins";
+import { importPKCS8, SignJWT } from "jose";
 import { Pool } from "pg";
 import {
+  appleAuthIsConfigured,
   betterAuthIsConfigured,
   betterAuthURL,
   passkeyRelyingPartyID,
@@ -16,6 +18,26 @@ const fallbackDatabaseURL = "postgresql://pressay:pressay@127.0.0.1:1/pressay_au
 const fallbackSecret = "pressay-disabled-auth-secret-that-is-never-served";
 const macOSClientID = process.env.PRESSAY_MACOS_OAUTH_CLIENT_ID || "w9ckUgrcFp7H7wNV";
 const apiResource = process.env.PRESSAY_OAUTH_RESOURCE || "https://api.press-say.app";
+
+async function generateAppleClientSecret(): Promise<string> {
+  const clientID = process.env.APPLE_CLIENT_ID;
+  const teamID = process.env.APPLE_TEAM_ID;
+  const keyID = process.env.APPLE_KEY_ID;
+  const privateKey = process.env.APPLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  if (!clientID || !teamID || !keyID || !privateKey) {
+    throw new Error("Sign in with Apple is not configured");
+  }
+  const signingKey = await importPKCS8(privateKey, "ES256");
+  const now = Math.floor(Date.now() / 1_000);
+  return new SignJWT({})
+    .setProtectedHeader({ alg: "ES256", kid: keyID })
+    .setIssuer(teamID)
+    .setSubject(clientID)
+    .setAudience("https://appleid.apple.com")
+    .setIssuedAt(now)
+    .setExpirationTime(now + 180 * 24 * 60 * 60)
+    .sign(signingKey);
+}
 
 export const authOptions = {
   appName: "Pressay",
@@ -33,14 +55,21 @@ export const authOptions = {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || "disabled.apps.googleusercontent.com",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "disabled"
-    }
+    },
+    ...(appleAuthIsConfigured() ? {
+      apple: async () => ({
+        clientId: process.env.APPLE_CLIENT_ID as string,
+        clientSecret: await generateAppleClientSecret(),
+        appBundleIdentifier: process.env.APPLE_APP_BUNDLE_IDENTIFIER
+      })
+    } : {})
   },
   account: {
     modelName: "auth_accounts",
     encryptOAuthTokens: true,
     accountLinking: {
       enabled: true,
-      trustedProviders: ["google"],
+      trustedProviders: ["google", "apple"],
       allowDifferentEmails: false,
       allowUnlinkingAll: false
     }
