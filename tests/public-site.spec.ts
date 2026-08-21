@@ -61,6 +61,16 @@ test("expanded legal pages expose identity, privacy and withdrawal routes", asyn
   await expect(page.getByRole("heading", { name: "Droit de rétractation" })).toBeVisible();
 });
 
+test("locale-neutral commercial URLs resolve instead of returning 404", async ({
+  page,
+}) => {
+  for (const path of ["support", "privacy", "terms"]) {
+    const response = await page.goto(`/${path}`);
+    expect(response?.status()).toBe(200);
+    await expect(page).toHaveURL(new RegExp(`/(fr|en)/${path}$`));
+  }
+});
+
 test("English routes expose factual pricing and the current launch state", async ({ page }) => {
   await page.goto("/en/pricing");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Local stays free");

@@ -2,7 +2,7 @@ import { SignIn } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { BetterAuthSignIn } from "@/components/better-auth-sign-in";
-import { identityProvider } from "@/lib/auth-env";
+import { appleAuthIsConfigured, identityProvider } from "@/lib/auth-env";
 
 export default async function SignInPage({
   searchParams
@@ -19,7 +19,7 @@ export default async function SignInPage({
         pressay
       </Link>
       {provider === "better-auth" ? (
-        <BetterAuthSignIn callbackURL={callbackURL} />
+        <BetterAuthSignIn callbackURL={callbackURL} appleEnabled={appleAuthIsConfigured()} />
       ) : provider === "clerk" ? (
         <SignIn
           fallbackRedirectUrl={callbackURL}

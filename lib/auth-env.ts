@@ -15,6 +15,15 @@ export function betterAuthIsConfigured(): boolean {
   );
 }
 
+export function appleAuthIsConfigured(): boolean {
+  return Boolean(
+    process.env.APPLE_CLIENT_ID &&
+    process.env.APPLE_TEAM_ID &&
+    process.env.APPLE_KEY_ID &&
+    process.env.APPLE_PRIVATE_KEY
+  );
+}
+
 export function clerkIsConfigured(): boolean {
   return Boolean(
     process.env.CLERK_SECRET_KEY &&
@@ -43,7 +52,12 @@ export function trustedAuthOrigins(): string[] {
   const developmentOrigins = process.env.NODE_ENV === "production"
     ? []
     : ["http://localhost:3000", "http://localhost:31971"];
-  return Array.from(new Set([betterAuthURL(), ...developmentOrigins, ...configured]));
+  return Array.from(new Set([
+    betterAuthURL(),
+    "https://appleid.apple.com",
+    ...developmentOrigins,
+    ...configured
+  ]));
 }
 
 export function passkeyRelyingPartyID(): string {

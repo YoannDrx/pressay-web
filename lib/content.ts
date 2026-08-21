@@ -61,8 +61,8 @@ export const plans = [
     code: "pro_byok",
     name: "Pro",
     monthly: "7,99 € / mois",
-    detailFr: "69 € / an · essai 14 jours sans carte",
-    detailEn: "€69 / year · 14-day trial, no card",
+    detailFr: "69 € / an · aucun essai automatique",
+    detailEn: "€69 / year · no automatic trial",
     featuresFr: ["Commandes Voice Bar avancées", "Modes et profils par application", "Apple Intelligence et BYOK", "Synchronisation chiffrée", "Quota Pressay Cloud"],
     featuresEn: ["Advanced Voice Bar commands", "Modes and per-app profiles", "Apple Intelligence and BYOK", "Encrypted sync", "Pressay Cloud allowance"]
   }
