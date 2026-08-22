@@ -1,4 +1,5 @@
 const repository = "YoannDrx/pressay";
+const fallbackTag = "v2.0.0-beta.3";
 
 export type PublicRelease = {
   tag: string;
@@ -39,7 +40,10 @@ export async function getPublicRelease(): Promise<PublicRelease> {
 }
 
 function fallbackRelease(): PublicRelease {
-  const tag = "v2.0.0-beta.1";
+  // Keep the public install path usable if GitHub's release API is degraded.
+  // This tag must reference an asset whose downloaded DMG has passed the
+  // Gatekeeper, stapler and checksum release gate.
+  const tag = fallbackTag;
   return {
     tag,
     dmgURL: `https://github.com/${repository}/releases/download/${tag}/Pressay.dmg`,
