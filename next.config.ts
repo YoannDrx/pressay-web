@@ -15,10 +15,34 @@ const contentSecurityPolicy = [
   "upgrade-insecure-requests"
 ].join("; ");
 
+const modelRedirects = [
+  {
+    source: "/pressay/parakeet-v3/v1/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+    destination:
+      "https://huggingface.co/memoravox/parakeet-tdt-0.6b-v3-gguf/resolve/main/parakeet-tdt-0.6b-v3-Q8_0.gguf?download=true"
+  },
+  {
+    source: "/pressay/whisper-small/v1/whisper-small-Q8_0.gguf",
+    destination:
+      "https://huggingface.co/memoravox/whisper-small-gguf/resolve/main/whisper-small-Q8_0.gguf?download=true"
+  },
+  {
+    source: "/pressay/whisper-large/v1/whisper-large-v3-Q5_K_M.gguf",
+    destination:
+      "https://huggingface.co/memoravox/whisper-large-v3-gguf/resolve/main/whisper-large-v3-Q5_K_M.gguf?download=true"
+  }
+] as const;
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async redirects() {
     return [
+      ...modelRedirects.map(({ source, destination }) => ({
+        source,
+        has: [{ type: "host" as const, value: "models.press-say.app" }],
+        destination,
+        permanent: false
+      })),
       {
         source: "/:path*",
         has: [{ type: "host", value: "www.press-say.app" }],
