@@ -53,6 +53,32 @@ test("commercial deployment boundary accepts only the canonical production graph
   }
 });
 
+test("the documented Silero VAD URL resolves through an immutable versioned route", async ({
+  request,
+}) => {
+  const legacy = await request.get("/silero_vad_v4.onnx", {
+    headers: { host: "models.press-say.app" },
+    maxRedirects: 0,
+  });
+  expect(legacy.status()).toBe(307);
+  expect(legacy.headers().location).toBe(
+    "https://models.press-say.app/pressay/silero-vad/v4/silero_vad_v4.onnx",
+  );
+
+  const versioned = await request.get(
+    "/pressay/silero-vad/v4/silero_vad_v4.onnx",
+    {
+      headers: { host: "models.press-say.app" },
+      maxRedirects: 0,
+    },
+  );
+  expect(versioned.status()).toBe(308);
+  expect(versioned.headers()["cache-control"]).toContain("immutable");
+  expect(versioned.headers().location).toContain(
+    "/YoannDrx/pressay/v2.0.0-beta.3/src-tauri/resources/models/silero_vad_v4.onnx",
+  );
+});
+
 test("French landing exposes the product contract and metadata", async ({ page }) => {
   const response = await page.goto("/fr");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Votre Mac");
