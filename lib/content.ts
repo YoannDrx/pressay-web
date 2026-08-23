@@ -58,7 +58,7 @@ export const plans = [
     featuresEn: ["Unlimited local dictation", "Shortcut, Voice Bar and insertion", "Basic dictionary", "Optional local history"]
   },
   {
-    code: "pro_byok",
+    code: "pro",
     name: "Pro",
     monthly: "7,99 € / mois",
     detailFr: "69 € / an · aucun essai automatique",

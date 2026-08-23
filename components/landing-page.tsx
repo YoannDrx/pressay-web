@@ -7,14 +7,35 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import type { Locale } from "@/lib/content";
 import { copy } from "@/lib/content";
+import { publicReleaseCapabilities } from "@/lib/public-release-capabilities";
 
 export function LandingPage({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const fr = locale === "fr";
-  const checkoutEnabled = process.env.COMMERCIAL_CHECKOUT_ENABLED === "true";
+  const release = publicReleaseCapabilities();
+  const remoteRoutesPublished =
+    release.byokValidated || release.pressayCloudValidated;
+  const localProof = fr
+    ? ["02", "Routes sous contrôle", remoteRoutesPublished
+      ? "Les routes distantes validées restent explicites et ne remplacent jamais le local silencieusement."
+      : "Les routes supplémentaires resteront fermées jusqu’à leur validation de bout en bout."]
+    : ["02", "Routes under control", remoteRoutesPublished
+      ? "Validated remote routes stay explicit and never silently replace Local."
+      : "Additional routes stay closed until their end-to-end validation is complete."];
+  const productProofs = fr
+    ? [
+        ["Partout", "Mail, Slack, navigateur, IDE et terminal."],
+        ["Local validé", "Trois modèles locaux, hors ligne et sans compte."],
+        ["Réversible", "Cible vérifiée, aperçu éditable, presse-papiers préservé."],
+      ]
+    : [
+        ["Everywhere", "Mail, Slack, browsers, IDEs and terminals."],
+        ["Validated Local", "Three local models, offline and without an account."],
+        ["Reversible", "Verified target, editable preview, preserved clipboard."],
+      ];
   const offers = [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "EUR" },
-    ...(checkoutEnabled
+    ...(release.commercialOfferReady
       ? [
           { "@type": "Offer", name: "Pro monthly", price: "7.99", priceCurrency: "EUR" },
           { "@type": "Offer", name: "Pro annual", price: "69", priceCurrency: "EUR" },
@@ -40,7 +61,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
         <div className="cinema-copy">
           <span className="eyebrow">{t.eyebrow}</span>
           <h1>{fr ? <>Votre Mac,<br /><span>devient vocal.</span></> : <>Your Mac,<br /><span>now speaks.</span></>}</h1>
-          <p>{fr ? "Dictez, transformez et corrigez dans chaque app. Pressay rend la route de traitement visible et garde le local comme comportement par défaut." : "Dictate, transform and correct in every app. Pressay makes the processing route visible and keeps local as the default."}</p>
+          <p>{fr ? "Dictez dans chaque app avec une route locale visible et contrôlable. Les transformations supplémentaires ne sont publiées qu’après validation." : "Dictate in every app with a visible, controlled local route. Additional transformations are published only after validation."}</p>
           <div className="hero-actions">
             <Link className="button button-primary hero-download" href={`/${locale}/download`}><span>⌘</span>{t.download}</Link>
             <Link className="button button-glass" href="#experience">{fr ? "Voir comment ça marche" : "See how it works"}</Link>
@@ -53,7 +74,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
 
       <div id="experience"><ImmersiveStory locale={locale} /></div>
 
-      <ProcessingRoutes locale={locale} />
+      <ProcessingRoutes locale={locale} enabledRoutes={release.processingRoutes} />
 
       <section className="everywhere-section" id="product">
         <div className="shell" data-reveal>
@@ -84,18 +105,18 @@ export function LandingPage({ locale }: { locale: Locale }) {
         <div className="trust-grid shell">
           {(fr ? [
             ["01", "Local d’abord", "Les modèles de transcription tournent entièrement sur ton Mac. Aucune voix sur nos serveurs."],
-            ["02", "BYOK direct", "Ta clé reste dans le Trousseau. Les requêtes vont au fournisseur choisi, pas à Pressay."],
+            localProof,
             ["03", "Réversible", "Aperçu, annulation locale, copie de secours et export restent sous ton contrôle."],
           ] : [
             ["01", "Local first", "Transcription models run entirely on your Mac. No voice reaches our servers."],
-            ["02", "Direct BYOK", "Your key stays in Keychain. Requests go to your provider, not through Pressay."],
+            localProof,
             ["03", "Reversible", "Preview, local undo, safety copy and export remain under your control."],
           ]).map(([number, title, body]) => <article data-reveal key={number}><span>{number}</span><h3>{title}</h3><p>{body}</p></article>)}
         </div>
         <Link className="security-link" href={`/${locale}/security`}>{fr ? "Ouvrir le modèle de sécurité" : "Open the security model"}<span>↗</span></Link>
       </section>
 
-      <section className="proof-ribbon" aria-label={fr ? "Preuves Pressay" : "Pressay proofs"}>{t.proofs.map(([title, detail], index) => <div key={title}><span>0{index + 1}</span><strong>{title}</strong><p>{detail}</p></div>)}</section>
+      <section className="proof-ribbon" aria-label={fr ? "Preuves Pressay" : "Pressay proofs"}>{productProofs.map(([title, detail], index) => <div key={title}><span>0{index + 1}</span><strong>{title}</strong><p>{detail}</p></div>)}</section>
 
       <section className="shell pricing-section immersive-pricing">
         <div className="section-heading" data-reveal><div><span className="mono-label">FREE / PRO</span><h2>{t.pricingTitle}</h2></div><p>{fr ? "La dictée locale reste illimitée. Pro débloque les workflows avancés, pas ta propre voix." : "Local dictation stays unlimited. Pro unlocks advanced workflows, not your own voice."}</p></div>
@@ -106,12 +127,12 @@ export function LandingPage({ locale }: { locale: Locale }) {
       <section className="faq shell">
         <div data-reveal><span className="mono-label">FAQ / NO FINE PRINT</span><h2>{t.faqTitle}</h2></div>
         {(fr ? [
-          ["Pressay envoie-t-il ma voix sur ses serveurs ?", "Non en local : le modèle reste sur le Mac. BYOK et Cloud ne sont utilisés qu’après un choix explicite."],
+          ["Pressay envoie-t-il ma voix sur ses serveurs ?", remoteRoutesPublished ? "Non en local : le modèle reste sur le Mac. Toute route distante publiée exige un choix explicite." : "Non avec la route actuellement publiée : le modèle reste sur le Mac."],
           ["Pourquoi demander Accessibilité ?", "L’édition Direct l’utilise pour prouver la cible et y insérer le résultat. Companion reste copy-only dans l’App Store."],
           ["Que devient mon presse-papiers ?", "Après une insertion réussie, Pressay restaure tous les items et formats présents avant la dictée. Une copie concurrente de ta part gagne toujours."],
           ["Le Cloud est-il obligatoire ?", "Non. La dictée locale fonctionne hors ligne, sans compte et sans quota."],
         ] : [
-          ["Does Pressay send my voice to its own servers?", "Not in Local mode: the model stays on your Mac. BYOK and Cloud require an explicit choice."],
+          ["Does Pressay send my voice to its own servers?", remoteRoutesPublished ? "Not in Local mode: the model stays on your Mac. Every published remote route requires an explicit choice." : "Not with the currently published route: the model stays on your Mac."],
           ["Why does it need Accessibility?", "The Direct edition uses it to prove the target and insert text. The App Store Companion remains copy-only."],
           ["What happens to my clipboard?", "After a successful insertion, Pressay restores every item and format that existed before dictation. A concurrent copy from you always wins."],
           ["Is Cloud required?", "No. Local dictation works offline, without an account or quota."],

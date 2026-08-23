@@ -103,7 +103,7 @@ function ProductStage({ locale }: { locale: Locale }) {
 
     <div className="clipboard-card clipboard-before"><span>VOICE COMMAND</span><strong>{fr ? "liste à puces" : "bullet list"}</strong><small>SAFE TEXT · LOCAL</small></div>
     <div className="clipboard-transfer" aria-hidden="true"><i /><i /><i /></div>
-    <div className="clipboard-card clipboard-after"><span>TRANSFORMED</span><strong>• Local first · • BYOK optional</strong><small>{fr ? "aperçu déterministe" : "deterministic preview"}</small></div>
+    <div className="clipboard-card clipboard-after"><span>TRANSFORMED</span><strong>• Local first · • Routes explicit</strong><small>{fr ? "aperçu déterministe" : "deterministic preview"}</small></div>
 
     <div className="consent-panel">
       <div><span>VOICE COMMAND INTENT</span><em>TEXT / SAFE</em></div>

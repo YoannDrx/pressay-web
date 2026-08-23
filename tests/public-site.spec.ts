@@ -1,7 +1,26 @@
 import { expect, test } from "@playwright/test";
 
 const isRemoteEnvironment = Boolean(process.env.PLAYWRIGHT_BASE_URL);
-const isCommercialLaunchEnabled = process.env.PLAYWRIGHT_COMMERCIAL_LAUNCH === "true";
+const requiredCommercialCapabilities = [
+  "advanced_voice_bar",
+  "app_profiles",
+  "byok",
+  "encrypted_sync",
+  "pressay_cloud",
+  "account_deletion",
+  "stripe_billing",
+];
+const validatedCommercialCapabilities = new Set(
+  (process.env.PRESSAY_PUBLIC_VALIDATED_CAPABILITIES ?? "")
+    .split(",")
+    .map((capability) => capability.trim())
+    .filter(Boolean),
+);
+const isProScopeValidated = requiredCommercialCapabilities.every((capability) =>
+  validatedCommercialCapabilities.has(capability),
+);
+const isCommercialLaunchEnabled =
+  process.env.PLAYWRIGHT_COMMERCIAL_LAUNCH === "true" && isProScopeValidated;
 
 test("French landing exposes the product contract and metadata", async ({ page }) => {
   const response = await page.goto("/fr");
@@ -56,11 +75,21 @@ test("desktop secure-input help URL resolves to localized private guidance", asy
 test("processing routes stay explicit and keyboard operable", async ({ page }) => {
   await page.goto("/en");
   const routes = page.getByRole("group", { name: "Processing route" });
-  await expect(routes.getByRole("button")).toHaveCount(4);
+  const expectedRoutes = [
+    "Local",
+    ...(validatedCommercialCapabilities.has("apple_intelligence") ? ["Apple Intelligence"] : []),
+    ...(validatedCommercialCapabilities.has("byok") ? ["BYOK"] : []),
+    ...(validatedCommercialCapabilities.has("pressay_cloud") ? ["Pressay Cloud"] : []),
+  ];
+  await expect(routes.getByRole("button")).toHaveCount(expectedRoutes.length);
   await expect(routes.getByRole("button", { name: "Local" })).toHaveAttribute("aria-pressed", "true");
-  await routes.getByRole("button", { name: "BYOK" }).click();
-  await expect(routes.getByRole("button", { name: "BYOK" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByText("Your key stays in Keychain and the Voice Bar names the selected provider.", { exact: true })).toBeVisible();
+  for (const route of expectedRoutes) {
+    await expect(routes.getByRole("button", { name: route, exact: true })).toBeVisible();
+  }
+  if (expectedRoutes.length === 1) {
+    await expect(routes.getByRole("button", { name: "BYOK" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "One voice. One validated route." })).toBeVisible();
+  }
 });
 
 test("immersive motion has a complete reduced-motion fallback", async ({ page }) => {
@@ -102,6 +131,10 @@ test("English routes expose factual pricing and the current launch state", async
   } else {
     await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(1);
     await expect(page.getByRole("button", { name: /€69|€7\.99/ })).toHaveCount(0);
+    if (!isProScopeValidated) {
+      await expect(page.getByText("The Pro scope will be published", { exact: false })).toBeVisible();
+      await expect(page.getByText("Apple Intelligence and BYOK", { exact: true })).toHaveCount(0);
+    }
   }
 });
 

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { SignJWT } from "jose";
 import { auth } from "@/lib/auth";
 import { identityProvider } from "@/lib/auth-env";
+import { publicReleaseCapabilities } from "@/lib/public-release-capabilities";
 import { getWebIdentity, type WebIdentity } from "@/lib/server-identity";
 
 export function commercialIsConfigured(): boolean {
@@ -12,8 +13,7 @@ export function commercialIsConfigured(): boolean {
 }
 
 export function commercialCheckoutIsEnabled(): boolean {
-  return commercialIsConfigured()
-    && process.env.COMMERCIAL_CHECKOUT_ENABLED === "true";
+  return commercialIsConfigured() && publicReleaseCapabilities().commercialOfferReady;
 }
 
 export async function pressayAPI(

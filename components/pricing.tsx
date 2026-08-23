@@ -2,11 +2,18 @@ import Link from "next/link";
 import { CheckoutButton } from "@/components/checkout-button";
 import type { Locale } from "@/lib/content";
 import { plans } from "@/lib/content";
+import { publicReleaseCapabilities } from "@/lib/public-release-capabilities";
 
 export function Pricing({ locale, compact = false }: { locale: Locale; compact?: boolean }) {
-  const checkoutEnabled = process.env.COMMERCIAL_CHECKOUT_ENABLED === "true";
+  const release = publicReleaseCapabilities();
   return <><div className={`pricing-grid${compact ? " compact" : ""}`}>
-    {plans.map((plan) => <article className={`price-card ${plan.code === "pro_byok" ? "featured" : ""}`} key={plan.code}>
+    {plans.map((plan) => {
+      const features = plan.code === "pro" && !release.proScopeValidated
+        ? locale === "fr"
+          ? ["Périmètre final publié après validation", "Activation après confirmation de paiement", "Free local reste inchangé"]
+          : ["Final scope published after validation", "Activation follows payment confirmation", "Local Free remains unchanged"]
+        : locale === "fr" ? plan.featuresFr : plan.featuresEn;
+      return <article className={`price-card ${plan.code === "pro" ? "featured" : ""}`} key={plan.code}>
       <div>
         <span className="mono-label">{plan.code.replaceAll("_", " / ")}</span>
         <h3>{plan.name}</h3>
@@ -14,11 +21,11 @@ export function Pricing({ locale, compact = false }: { locale: Locale; compact?:
         <p>{locale === "fr" ? plan.detailFr : plan.detailEn}</p>
       </div>
       <ul>
-        {(locale === "fr" ? plan.featuresFr : plan.featuresEn).map((feature) => <li key={feature}>{feature}</li>)}
+        {features.map((feature) => <li key={feature}>{feature}</li>)}
       </ul>
       {plan.code === "free" ?
         <Link className="button full" href={`/${locale}/download`}>{locale === "fr" ? "Télécharger" : "Download"}</Link> :
-        !checkoutEnabled ?
+        !release.commercialOfferReady ?
           <span className="button button-disabled full" aria-disabled="true">{locale === "fr" ? "Ouverture prochaine" : "Coming soon"}</span> :
         <div className="price-actions">
           <CheckoutButton plan="pro_byok" interval="annual" locale={locale}>
@@ -28,6 +35,7 @@ export function Pricing({ locale, compact = false }: { locale: Locale; compact?:
             {locale === "fr" ? "Ou 7,99 €/mois" : "Or €7.99/month"}
           </CheckoutButton>
         </div>}
-    </article>)}
+    </article>;
+    })}
   </div><p className="pricing-legal-note">{locale === "fr" ? "Prix, taxes applicables et renouvellement affichés avant commande. Les offres payantes ouvriront après validation fiscale et des obligations de vente à distance." : "Final price, applicable taxes and renewal are shown before purchase. Paid plans will open after tax and distance-selling requirements are validated."}</p></>;
 }

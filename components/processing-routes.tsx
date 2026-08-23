@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Locale } from "@/lib/content";
+import type { PublicProcessingRoute } from "@/lib/public-release-capabilities";
 
 const routes = {
   local: {
@@ -42,10 +43,18 @@ const routes = {
 
 type RouteId = keyof typeof routes;
 
-export function ProcessingRoutes({ locale }: { locale: Locale }) {
+export function ProcessingRoutes({
+  locale,
+  enabledRoutes,
+}: {
+  locale: Locale;
+  enabledRoutes: PublicProcessingRoute[];
+}) {
   const [active, setActive] = useState<RouteId>("local");
   const fr = locale === "fr";
   const selected = routes[active];
+  const visibleRoutes = (Object.entries(routes) as [RouteId, (typeof routes)[RouteId]][])
+    .filter(([id]) => enabledRoutes.includes(id));
 
   return (
     <section className="route-map-section" aria-labelledby="route-map-title">
@@ -53,7 +62,9 @@ export function ProcessingRoutes({ locale }: { locale: Locale }) {
         <div className="route-map-copy" data-reveal>
           <span className="mono-label">ROUTES / EXPLICIT BY DESIGN</span>
           <h2 id="route-map-title">
-            {fr ? "Une voix. Quatre routes visibles." : "One voice. Four visible routes."}
+            {visibleRoutes.length === 1
+              ? fr ? "Une voix. Une route validée." : "One voice. One validated route."
+              : fr ? "Une voix. Des routes visibles." : "One voice. Visible routes."}
           </h2>
           <p>
             {fr
@@ -82,7 +93,7 @@ export function ProcessingRoutes({ locale }: { locale: Locale }) {
             <p>{fr ? selected.detailFr : selected.detailEn}</p>
           </div>
           <div className="route-selector" role="group" aria-label={fr ? "Route de traitement" : "Processing route"}>
-            {(Object.entries(routes) as [RouteId, (typeof routes)[RouteId]][]).map(
+            {visibleRoutes.map(
               ([id, route]) => (
                 <button
                   type="button"
