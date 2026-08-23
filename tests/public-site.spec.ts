@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { bootstrapWebAccount } from "../lib/account-bootstrap";
 import { commercialDeploymentStatus } from "../lib/commercial-deployment";
 
 const isRemoteEnvironment = Boolean(process.env.PLAYWRIGHT_BASE_URL);
@@ -51,6 +52,35 @@ test("commercial deployment boundary accepts only the canonical production graph
       commercialDeploymentStatus({ ...canonicalCommercialEnvironment, ...override }).ready,
     ).toBe(false);
   }
+});
+
+test("commercial requests bootstrap a web account without consuming a Mac slot", async () => {
+  const requests: string[] = [];
+  const fetcher = async (input: string | URL | Request) => {
+    requests.push(String(input));
+    return new Response(null, { status: 204 });
+  };
+
+  await expect(
+    bootstrapWebAccount("https://api.press-say.app/v1", new Headers(), fetcher),
+  ).resolves.toMatchObject({ status: 204 });
+  expect(requests).toEqual([
+    "https://api.press-say.app/v1/accounts/web-bootstrap",
+  ]);
+});
+
+test("web bootstrap falls back only when the modern Cloud route is absent", async () => {
+  const requests: string[] = [];
+  const fetcher = async (input: string | URL | Request) => {
+    requests.push(String(input));
+    return new Response(null, { status: requests.length === 1 ? 404 : 204 });
+  };
+
+  await bootstrapWebAccount("https://legacy.example/v1", new Headers(), fetcher);
+  expect(requests).toEqual([
+    "https://legacy.example/v1/accounts/web-bootstrap",
+    "https://legacy.example/v1/accounts/bootstrap",
+  ]);
 });
 
 test("the documented Silero VAD URL resolves through an immutable versioned route", async ({
