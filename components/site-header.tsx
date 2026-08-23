@@ -1,5 +1,4 @@
-import Image from "next/image";
-import Link from "next/link";
+/* eslint-disable @next/next/no-html-link-for-pages -- Public marketing navigation intentionally uses full document links so route prefetch cannot compete with the landing LCP. */
 import type { Locale } from "@/lib/content";
 import { copy } from "@/lib/content";
 import { identityProvider } from "@/lib/auth-env";
@@ -9,21 +8,21 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   const alternate = locale === "fr" ? "en" : "fr";
   const identityEnabled = identityProvider() !== "disabled";
   return <header className="site-header">
-    <Link className="brand" href={`/${locale}`} aria-label="Pressay — accueil">
-      <Image src="/logo.svg" width={34} height={34} alt="" priority />
+    <a className="brand" href={`/${locale}`} aria-label="Pressay — accueil">
+      <span className="brand-logo" aria-hidden="true" />
       <span>pressay</span>
-    </Link>
+    </a>
     <nav className="desktop-nav" aria-label={locale === "fr" ? "Navigation principale" : "Primary navigation"}>
-      <Link href={`/${locale}#product`}>{nav.product}</Link>
-      <Link href={`/${locale}/security`}>{nav.security}</Link>
-      <Link href={`/${locale}/pricing`}>{nav.pricing}</Link>
+      <a href={`/${locale}#product`}>{nav.product}</a>
+      <a href={`/${locale}/security`}>{nav.security}</a>
+      <a href={`/${locale}/pricing`}>{nav.pricing}</a>
     </nav>
     <div className="nav-actions">
-      <span className="language-switch" aria-label={locale === "fr" ? "Choisir la langue" : "Choose language"}><Link className={locale === "fr" ? "active" : ""} href="/fr" hrefLang="fr">FR</Link><Link className={locale === "en" ? "active" : ""} href="/en" hrefLang="en">EN</Link></span>
-      {identityEnabled ? <Link className="text-link" href="/sign-in">{nav.signIn}</Link> : null}
+      <span className="language-switch" aria-label={locale === "fr" ? "Choisir la langue" : "Choose language"}><a className={locale === "fr" ? "active" : ""} href="/fr" hrefLang="fr">FR</a><a className={locale === "en" ? "active" : ""} href="/en" hrefLang="en">EN</a></span>
+      {identityEnabled ? <a className="text-link" href="/sign-in">{nav.signIn}</a> : null}
       <span className="nav-divider" aria-hidden="true" />
-      <Link className="button button-small" href={`/${locale}/download`}>{nav.download}</Link>
-      <details className="mobile-menu"><summary aria-label={locale === "fr" ? "Ouvrir le menu" : "Open menu"}>☰</summary><div><Link href={`/${locale}#product`}>{nav.product}</Link><Link href={`/${locale}/security`}>{nav.security}</Link><Link href={`/${locale}/pricing`}>{nav.pricing}</Link>{identityEnabled ? <Link href="/sign-in">{nav.signIn}</Link> : null}<Link href={`/${alternate}`} hrefLang={alternate}>{alternate.toUpperCase()}</Link><Link className="button button-primary" href={`/${locale}/download`}>{nav.download}</Link></div></details>
+      <a className="button button-small" href={`/${locale}/download`}>{nav.download}</a>
+      <details className="mobile-menu"><summary aria-label={locale === "fr" ? "Ouvrir le menu" : "Open menu"}>☰</summary><div><a href={`/${locale}#product`}>{nav.product}</a><a href={`/${locale}/security`}>{nav.security}</a><a href={`/${locale}/pricing`}>{nav.pricing}</a>{identityEnabled ? <a href="/sign-in">{nav.signIn}</a> : null}<a href={`/${alternate}`} hrefLang={alternate}>{alternate.toUpperCase()}</a><a className="button button-primary" href={`/${locale}/download`}>{nav.download}</a></div></details>
     </div>
   </header>;
 }

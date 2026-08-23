@@ -1,45 +1,10 @@
-"use client";
-
-import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import type { Locale } from "@/lib/content";
 
 const bars = [18, 34, 58, 39, 77, 53, 87, 45, 68, 31, 74, 92, 61, 38, 70, 48, 82, 56, 28, 64, 43, 76, 51];
 
 export function ImmersiveStory({ locale }: { locale: Locale }) {
-  const rootRef = useRef<HTMLElement>(null);
   const fr = locale === "fr";
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let frame = 0;
-
-    const update = () => {
-      frame = 0;
-      const rect = root.getBoundingClientRect();
-      const travel = Math.max(1, root.offsetHeight - window.innerHeight);
-      const progress = Math.min(1, Math.max(0, -rect.top / travel));
-      const scene = Math.min(3, Math.floor(progress * 4));
-      root.style.setProperty("--story-progress", progress.toFixed(4));
-      root.dataset.scene = String(scene);
-    };
-
-    const schedule = () => {
-      if (!frame && !reduceMotion.matches) frame = window.requestAnimationFrame(update);
-    };
-
-    update();
-    window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, []);
 
   const chapters = fr ? [
     ["01 / PRESS", "Le signal s’ouvre.", "Maintiens ton raccourci. L’icône menu bar et la Voice Bar passent ensemble de repos à écoute."],
@@ -53,7 +18,7 @@ export function ImmersiveStory({ locale }: { locale: Locale }) {
     ["04 / ACT", "Text lands. No surprise.", "Pressay verifies the target, inserts, confirms, then returns to idle. Every external route stays opt-in."],
   ];
 
-  return <section className="scroll-story" ref={rootRef} data-scene="0" data-testid="scroll-story">
+  return <section className="scroll-story" data-scene="0" data-testid="scroll-story">
     <div className="story-sticky">
       <div className="story-aurora" aria-hidden="true" />
       <div className="story-grid shell">
@@ -116,25 +81,4 @@ function ProductStage({ locale }: { locale: Locale }) {
       <div className="consent-seal"><i /> {fr ? "CIBLE VÉRIFIÉE · INSÉRÉ" : "TARGET VERIFIED · INSERTED"}</div>
     </div>
   </div>;
-}
-
-export function PageRevealEffects() {
-  useEffect(() => {
-    const elements = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      elements.forEach((element) => element.dataset.visible = "true");
-      return;
-    }
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          (entry.target as HTMLElement).dataset.visible = "true";
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.16, rootMargin: "0px 0px -8%" });
-    elements.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
-  }, []);
-  return null;
 }

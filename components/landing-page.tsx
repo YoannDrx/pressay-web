@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { AppLogoMarquee } from "@/components/app-logo-marquee";
-import { ImmersiveStory, PageRevealEffects } from "@/components/immersive-story";
+import { ImmersiveStory } from "@/components/immersive-story";
+import { LandingEffects } from "@/components/landing-effects";
 import { Pricing } from "@/components/pricing";
 import { ProcessingRoutes } from "@/components/processing-routes";
 import { SiteFooter } from "@/components/site-footer";
@@ -49,7 +49,6 @@ export function LandingPage({ locale }: { locale: Locale }) {
       url: `https://press-say.app/${locale}`, downloadUrl: "https://press-say.app/download/pressay",
       offers
     }).replaceAll("<", "\\u003c") }} />
-    <PageRevealEffects />
     <SiteHeader locale={locale} />
     <main className="immersive-home">
       <section className="cinema-hero">
@@ -63,8 +62,8 @@ export function LandingPage({ locale }: { locale: Locale }) {
           <h1>{fr ? <>Votre Mac,<br /><span>devient vocal.</span></> : <>Your Mac,<br /><span>now speaks.</span></>}</h1>
           <p>{fr ? "Dictez dans chaque app avec une route locale visible et contrôlable. Les transformations supplémentaires ne sont publiées qu’après validation." : "Dictate in every app with a visible, controlled local route. Additional transformations are published only after validation."}</p>
           <div className="hero-actions">
-            <Link className="button button-primary hero-download" href={`/${locale}/download`}><span>⌘</span>{t.download}</Link>
-            <Link className="button button-glass" href="#experience">{fr ? "Voir comment ça marche" : "See how it works"}</Link>
+            <a className="button button-primary hero-download" href={`/${locale}/download`}><span>⌘</span>{t.download}</a>
+            <a className="button button-glass" href="#experience">{fr ? "Voir comment ça marche" : "See how it works"}</a>
           </div>
           <small>macOS 14+ · Apple Silicon · {fr ? "Free sans compte" : "Free without an account"}</small>
         </div>
@@ -92,7 +91,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
       <section className="modes-planet">
         <div className="planet-glow" aria-hidden="true" />
         <div className="shell modes-layout">
-          <div data-reveal><span className="mono-label">MODES / OUTPUT</span><h2>{fr ? "Ta voix ne change pas. Sa forme, oui." : "Your voice stays yours. Its shape adapts."}</h2><p>{t.modesBody}</p><Link className="inline-arrow" href={`/${locale}/pricing`}>{fr ? "Découvrir tous les modes" : "Explore every mode"} →</Link></div>
+          <div data-reveal><span className="mono-label">MODES / OUTPUT</span><h2>{fr ? "Ta voix ne change pas. Sa forme, oui." : "Your voice stays yours. Its shape adapts."}</h2><p>{t.modesBody}</p><a className="inline-arrow" href={`/${locale}/pricing`}>{fr ? "Découvrir tous les modes" : "Explore every mode"} →</a></div>
           <div className="mode-orbit" aria-label={fr ? "Modes Pressay" : "Pressay modes"}>
             <div className="orbit-core"><span>fn</span><small>PRESSAY</small></div>
             {["Fidèle", "Propre", "Message", "Email", "Prompt", "Commit"].map((mode, index) => <div className={`orbit-mode orbit-${index}`} key={mode}><i>0{index + 1}</i>{mode}</div>)}
@@ -113,7 +112,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
             ["03", "Reversible", "Preview, local undo, safety copy and export remain under your control."],
           ]).map(([number, title, body]) => <article data-reveal key={number}><span>{number}</span><h3>{title}</h3><p>{body}</p></article>)}
         </div>
-        <Link className="security-link" href={`/${locale}/security`}>{fr ? "Ouvrir le modèle de sécurité" : "Open the security model"}<span>↗</span></Link>
+        <a className="security-link" href={`/${locale}/security`}>{fr ? "Ouvrir le modèle de sécurité" : "Open the security model"}<span>↗</span></a>
       </section>
 
       <section className="proof-ribbon" aria-label={fr ? "Preuves Pressay" : "Pressay proofs"}>{productProofs.map(([title, detail], index) => <div key={title}><span>0{index + 1}</span><strong>{title}</strong><p>{detail}</p></div>)}</section>
@@ -121,7 +120,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
       <section className="shell pricing-section immersive-pricing">
         <div className="section-heading" data-reveal><div><span className="mono-label">FREE / PRO</span><h2>{t.pricingTitle}</h2></div><p>{fr ? "La dictée locale reste illimitée. Pro débloque les workflows avancés, pas ta propre voix." : "Local dictation stays unlimited. Pro unlocks advanced workflows, not your own voice."}</p></div>
         <Pricing locale={locale} compact />
-        <Link className="inline-arrow centered" href={`/${locale}/pricing`}>{fr ? "Comparer les plans en détail" : "Compare plans in detail"} →</Link>
+        <a className="inline-arrow centered" href={`/${locale}/pricing`}>{fr ? "Comparer les plans en détail" : "Compare plans in detail"} →</a>
       </section>
 
       <section className="faq shell">
@@ -139,8 +138,9 @@ export function LandingPage({ locale }: { locale: Locale }) {
         ]).map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}
       </section>
 
-      <section className="final-cta immersive-cta"><div className="cta-orb" aria-hidden="true" /><div data-reveal><span className="eyebrow">PRESS / SAY</span><h2>{fr ? <>Parlez.<br />Le clavier suit.</> : <>Speak.<br />The keyboard follows.</>}</h2><p>{fr ? "Votre voix. Votre cible. Votre contrôle." : "Your voice. Your target. Your control."}</p><Link className="button button-light" href={`/${locale}/download`}>{t.download}</Link></div></section>
+      <section className="final-cta immersive-cta"><div className="cta-orb" aria-hidden="true" /><div data-reveal><span className="eyebrow">PRESS / SAY</span><h2>{fr ? <>Parlez.<br />Le clavier suit.</> : <>Speak.<br />The keyboard follows.</>}</h2><p>{fr ? "Votre voix. Votre cible. Votre contrôle." : "Your voice. Your target. Your control."}</p><a className="button button-light" href={`/${locale}/download`}>{t.download}</a></div></section>
     </main>
     <SiteFooter locale={locale} />
+    <LandingEffects />
   </>;
 }

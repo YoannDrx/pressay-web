@@ -1,4 +1,4 @@
-import { SignIn } from "@clerk/nextjs";
+import { ClerkProvider, SignIn } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { BetterAuthSignIn } from "@/components/better-auth-sign-in";
@@ -21,12 +21,14 @@ export default async function SignInPage({
       {provider === "better-auth" ? (
         <BetterAuthSignIn callbackURL={callbackURL} appleEnabled={appleAuthIsConfigured()} />
       ) : provider === "clerk" ? (
-        <SignIn
-          fallbackRedirectUrl={callbackURL}
-          signUpFallbackRedirectUrl={callbackURL}
-          signUpUrl="/sign-up"
-          withSignUp
-        />
+        <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
+          <SignIn
+            fallbackRedirectUrl={callbackURL}
+            signUpFallbackRedirectUrl={callbackURL}
+            signUpUrl="/sign-up"
+            withSignUp
+          />
+        </ClerkProvider>
       ) : (
         <div className="auth-placeholder">
           <span className="mono-label">COMMERCIAL BETA</span>

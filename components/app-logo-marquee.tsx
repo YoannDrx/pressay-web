@@ -1,5 +1,6 @@
 import icons from "@iconify-json/logos/icons.json";
 import simpleIcons from "@iconify-json/simple-icons/icons.json";
+import type { CSSProperties } from "react";
 
 const applications = [
   ["Mail", "apple"], ["Notes", "apple"], ["Safari", "safari"],
@@ -36,13 +37,23 @@ function BrandIcon({ name, source = "logos" }: { name: string; source?: "logos" 
   if (source === "simple") {
     const icon = simpleIcons.icons[name as keyof typeof simpleIcons.icons];
     if (!icon) return <span className="brand-icon-fallback">●</span>;
-    const width = "width" in icon ? icon.width : simpleIcons.width;
-    const height = "height" in icon ? icon.height : simpleIcons.height;
-    return <svg className="brand-icon" viewBox={`0 0 ${width} ${height}`} role="presentation" dangerouslySetInnerHTML={{ __html: icon.body }} />;
+    const width = "width" in icon && typeof icon.width === "number" ? icon.width : simpleIcons.width;
+    const height = "height" in icon && typeof icon.height === "number" ? icon.height : simpleIcons.height;
+    return <BrandIconImage body={icon.body} width={width} height={height} />;
   }
   const icon = icons.icons[name as keyof typeof icons.icons];
   if (!icon) return <span className="brand-icon-fallback">●</span>;
-  const width = "width" in icon ? icon.width : icons.width;
-  const height = "height" in icon ? icon.height : icons.height;
-  return <svg className="brand-icon" viewBox={`0 0 ${width} ${height}`} role="presentation" dangerouslySetInnerHTML={{ __html: icon.body }} />;
+  const width = "width" in icon && typeof icon.width === "number" ? icon.width : icons.width;
+  const height = "height" in icon && typeof icon.height === "number" ? icon.height : icons.height;
+  return <BrandIconImage body={icon.body} width={width} height={height} />;
+}
+
+function BrandIconImage({ body, width, height }: { body: string; width: number; height: number }) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">${body}</svg>`;
+  const image = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  return <span
+    aria-hidden="true"
+    className="brand-icon brand-icon-image"
+    style={{ backgroundImage: image } as CSSProperties}
+  />;
 }

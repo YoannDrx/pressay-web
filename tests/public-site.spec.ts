@@ -56,7 +56,9 @@ test("landing navigation and compatibility marquee are accessible", async ({ pag
   await page.goto("/fr");
   await expect(page.getByLabel("Choisir la langue")).toContainText("FR");
   await expect(page.getByLabel("Applications compatibles")).toContainText("Slack");
-  await expect(page.locator(".app-logo-card svg")).toHaveCount(26);
+  const brandIcons = page.locator(".app-logo-card .brand-icon");
+  await expect(brandIcons).toHaveCount(26);
+  await expect(brandIcons.first()).toHaveCSS("background-image", /data:image\/svg\+xml/);
   await expect(page.getByRole("link", { name: "GitHub" })).toHaveCount(0);
 });
 
@@ -89,6 +91,11 @@ test("processing routes stay explicit and keyboard operable", async ({ page }) =
   if (expectedRoutes.length === 1) {
     await expect(routes.getByRole("button", { name: "BYOK" })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "One voice. One validated route." })).toBeVisible();
+  } else if (expectedRoutes.includes("BYOK")) {
+    await routes.getByRole("button", { name: "BYOK", exact: true }).click();
+    await expect(routes.getByRole("button", { name: "BYOK", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".route-console-core strong")).toHaveText("BYOK");
+    await expect(page.locator(".route-console")).toHaveAttribute("data-route", "byok");
   }
 });
 
@@ -127,7 +134,11 @@ test("English routes expose factual pricing and the current launch state", async
   await expect(page.getByRole("row", { name: /Superwhisper/ })).toContainText("$249.99");
   if (isCommercialLaunchEnabled) {
     await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(0);
-    expect(await page.getByRole("button", { name: /€69|€7\.99/ }).count()).toBeGreaterThan(0);
+    const checkoutButtons = page.getByRole("button", { name: /€69|€7\.99/ });
+    expect(await checkoutButtons.count()).toBeGreaterThan(0);
+    await expect(checkoutButtons.first()).toBeDisabled();
+    for (const consent of await page.getByRole("checkbox").all()) await consent.check();
+    await expect(checkoutButtons.first()).toBeEnabled();
   } else {
     await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(1);
     await expect(page.getByRole("button", { name: /€69|€7\.99/ })).toHaveCount(0);
