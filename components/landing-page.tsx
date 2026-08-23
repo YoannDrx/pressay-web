@@ -11,16 +11,22 @@ import { copy } from "@/lib/content";
 export function LandingPage({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const fr = locale === "fr";
+  const checkoutEnabled = process.env.COMMERCIAL_CHECKOUT_ENABLED === "true";
+  const offers = [
+    { "@type": "Offer", name: "Free", price: "0", priceCurrency: "EUR" },
+    ...(checkoutEnabled
+      ? [
+          { "@type": "Offer", name: "Pro monthly", price: "7.99", priceCurrency: "EUR" },
+          { "@type": "Offer", name: "Pro annual", price: "69", priceCurrency: "EUR" },
+        ]
+      : []),
+  ];
   return <>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
       "@context": "https://schema.org", "@type": "SoftwareApplication", name: "Pressay",
       applicationCategory: "ProductivityApplication", operatingSystem: "macOS 14 or later",
       url: `https://press-say.app/${locale}`, downloadUrl: "https://press-say.app/download/pressay",
-      offers: [
-        { "@type": "Offer", name: "Free", price: "0", priceCurrency: "EUR" },
-        { "@type": "Offer", name: "Pro monthly", price: "7.99", priceCurrency: "EUR" },
-        { "@type": "Offer", name: "Pro annual", price: "69", priceCurrency: "EUR" }
-      ]
+      offers
     }).replaceAll("<", "\\u003c") }} />
     <PageRevealEffects />
     <SiteHeader locale={locale} />

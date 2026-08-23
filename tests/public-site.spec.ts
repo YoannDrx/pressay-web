@@ -8,9 +8,29 @@ test("French landing exposes the product contract and metadata", async ({ page }
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Votre Mac");
   await expect(page.getByText("presse-papiers", { exact: false }).first()).toBeVisible();
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
+  const structuredData = await page
+    .locator('script[type="application/ld+json"]')
+    .textContent();
+  const offers = (JSON.parse(structuredData ?? "{}") as { offers?: Array<{ name: string }> })
+    .offers ?? [];
+  expect(offers.map((offer) => offer.name)).toEqual(
+    isCommercialLaunchEnabled ? ["Free", "Pro monthly", "Pro annual"] : ["Free"],
+  );
   expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
   await page.keyboard.press("Tab");
   await expect(page.locator(":focus-visible")).toBeVisible();
+});
+
+test("checkout result pages never grant Pro from a browser redirect", async ({ page }) => {
+  await page.goto("/checkout/success");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "en cours de confirmation",
+  );
+  await expect(page.getByText("ne suffit jamais à accorder un droit")).toBeVisible();
+
+  await page.goto("/checkout/cancel");
+  await expect(page.getByText("dictée locale Free")).toBeVisible();
+  await expect(page.getByText("BYOK")).toHaveCount(0);
 });
 
 test("landing navigation and compatibility marquee are accessible", async ({ page }) => {
