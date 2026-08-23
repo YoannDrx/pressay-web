@@ -1,5 +1,7 @@
 import "server-only";
 
+import { commercialDeploymentStatus } from "@/lib/commercial-deployment";
+
 export const publicCapabilityIds = [
   "advanced_voice_bar",
   "app_profiles",
@@ -36,6 +38,7 @@ function validatedCapabilities(): Set<PublicCapabilityId> {
 
 export function publicReleaseCapabilities() {
   const validated = validatedCapabilities();
+  const deployment = commercialDeploymentStatus();
   const processingRoutes: PublicProcessingRoute[] = ["local"];
   if (validated.has("apple_intelligence")) processingRoutes.push("apple");
   if (validated.has("byok")) processingRoutes.push("byok");
@@ -54,6 +57,8 @@ export function publicReleaseCapabilities() {
     pressayCloudValidated: validated.has("pressay_cloud"),
     proScopeValidated,
     commercialOfferReady:
-      process.env.COMMERCIAL_CHECKOUT_ENABLED === "true" && proScopeValidated,
+      process.env.COMMERCIAL_CHECKOUT_ENABLED === "true" &&
+      proScopeValidated &&
+      deployment.ready,
   };
 }

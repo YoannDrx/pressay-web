@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { commercialDeploymentStatus } from "../lib/commercial-deployment";
 
 const isRemoteEnvironment = Boolean(process.env.PLAYWRIGHT_BASE_URL);
 const requiredCommercialCapabilities = [
@@ -21,6 +22,36 @@ const isProScopeValidated = requiredCommercialCapabilities.every((capability) =>
 );
 const isCommercialLaunchEnabled =
   process.env.PLAYWRIGHT_COMMERCIAL_LAUNCH === "true" && isProScopeValidated;
+
+const canonicalCommercialEnvironment: NodeJS.ProcessEnv = {
+  NODE_ENV: "production",
+  PRESSAY_WEB_ENVIRONMENT: "production",
+  PRESSAY_WEB_CANONICAL_ORIGIN: "https://press-say.app",
+  PRESSAY_API_URL: "https://api.press-say.app/v1",
+  VERCEL: "1",
+  VERCEL_ENV: "production",
+  VERCEL_PROJECT_ID: "prj_0FmTMhNi5iA1hsLynK6Bh6mOJmvk",
+};
+
+test("commercial deployment boundary accepts only the canonical production graph", () => {
+  expect(commercialDeploymentStatus(canonicalCommercialEnvironment)).toEqual({
+    ready: true,
+    environment: "production",
+    reason: "ready",
+  });
+
+  const rejectedEnvironments = [
+    { VERCEL_ENV: "preview" },
+    { VERCEL_PROJECT_ID: "prj_wrong" },
+    { PRESSAY_WEB_CANONICAL_ORIGIN: "https://staging.press-say.app" },
+    { PRESSAY_API_URL: "https://api-staging.press-say.app/v1" },
+  ];
+  for (const override of rejectedEnvironments) {
+    expect(
+      commercialDeploymentStatus({ ...canonicalCommercialEnvironment, ...override }).ready,
+    ).toBe(false);
+  }
+});
 
 test("French landing exposes the product contract and metadata", async ({ page }) => {
   const response = await page.goto("/fr");
