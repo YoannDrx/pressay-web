@@ -1,4 +1,4 @@
-import { UserProfile } from "@clerk/nextjs";
+import { ClerkProvider, UserProfile } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { AccountSecurity } from "@/components/account-security";
@@ -20,7 +20,9 @@ export default async function UserProfilePage() {
       {provider === "better-auth" ? (
         <AccountSecurity initialSessions={[]} />
       ) : provider === "clerk" ? (
-        <UserProfile path="/user-profile" />
+        <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
+          <UserProfile path="/user-profile" />
+        </ClerkProvider>
       ) : (
         <div className="auth-placeholder">
           <span className="mono-label">SÉCURITÉ DU COMPTE</span>

@@ -1,23 +1,151 @@
 import { expect, test } from "@playwright/test";
+import { bootstrapWebAccount } from "../lib/account-bootstrap";
+import { commercialDeploymentStatus } from "../lib/commercial-deployment";
 
 const isRemoteEnvironment = Boolean(process.env.PLAYWRIGHT_BASE_URL);
-const isCommercialLaunchEnabled = process.env.PLAYWRIGHT_COMMERCIAL_LAUNCH === "true";
+const requiredCommercialCapabilities = [
+  "advanced_voice_bar",
+  "app_profiles",
+  "byok",
+  "encrypted_sync",
+  "pressay_cloud",
+  "account_deletion",
+  "stripe_billing",
+];
+const validatedCommercialCapabilities = new Set(
+  (process.env.PRESSAY_PUBLIC_VALIDATED_CAPABILITIES ?? "")
+    .split(",")
+    .map((capability) => capability.trim())
+    .filter(Boolean),
+);
+const isProScopeValidated = requiredCommercialCapabilities.every((capability) =>
+  validatedCommercialCapabilities.has(capability),
+);
+const isCommercialLaunchEnabled =
+  process.env.PLAYWRIGHT_COMMERCIAL_LAUNCH === "true" && isProScopeValidated;
+
+const canonicalCommercialEnvironment: NodeJS.ProcessEnv = {
+  NODE_ENV: "production",
+  PRESSAY_WEB_ENVIRONMENT: "production",
+  PRESSAY_WEB_CANONICAL_ORIGIN: "https://press-say.app",
+  PRESSAY_API_URL: "https://api.press-say.app/v1",
+  VERCEL: "1",
+  VERCEL_ENV: "production",
+  VERCEL_PROJECT_ID: "prj_0FmTMhNi5iA1hsLynK6Bh6mOJmvk",
+};
+
+test("commercial deployment boundary accepts only the canonical production graph", () => {
+  expect(commercialDeploymentStatus(canonicalCommercialEnvironment)).toEqual({
+    ready: true,
+    environment: "production",
+    reason: "ready",
+  });
+
+  const rejectedEnvironments = [
+    { VERCEL_ENV: "preview" },
+    { VERCEL_PROJECT_ID: "prj_wrong" },
+    { PRESSAY_WEB_CANONICAL_ORIGIN: "https://staging.press-say.app" },
+    { PRESSAY_API_URL: "https://api-staging.press-say.app/v1" },
+  ];
+  for (const override of rejectedEnvironments) {
+    expect(
+      commercialDeploymentStatus({ ...canonicalCommercialEnvironment, ...override }).ready,
+    ).toBe(false);
+  }
+});
+
+test("commercial requests bootstrap a web account without consuming a Mac slot", async () => {
+  const requests: string[] = [];
+  const fetcher = async (input: string | URL | Request) => {
+    requests.push(String(input));
+    return new Response(null, { status: 204 });
+  };
+
+  await expect(
+    bootstrapWebAccount("https://api.press-say.app/v1", new Headers(), fetcher),
+  ).resolves.toMatchObject({ status: 204 });
+  expect(requests).toEqual([
+    "https://api.press-say.app/v1/accounts/web-bootstrap",
+  ]);
+});
+
+test("web bootstrap falls back only when the modern Cloud route is absent", async () => {
+  const requests: string[] = [];
+  const fetcher = async (input: string | URL | Request) => {
+    requests.push(String(input));
+    return new Response(null, { status: requests.length === 1 ? 404 : 204 });
+  };
+
+  await bootstrapWebAccount("https://legacy.example/v1", new Headers(), fetcher);
+  expect(requests).toEqual([
+    "https://legacy.example/v1/accounts/web-bootstrap",
+    "https://legacy.example/v1/accounts/bootstrap",
+  ]);
+});
+
+test("the documented Silero VAD URL resolves through an immutable versioned route", async ({
+  request,
+}) => {
+  const legacy = await request.get("/silero_vad_v4.onnx", {
+    headers: { host: "models.press-say.app" },
+    maxRedirects: 0,
+  });
+  expect(legacy.status()).toBe(307);
+  expect(legacy.headers().location).toBe(
+    "https://models.press-say.app/pressay/silero-vad/v4/silero_vad_v4.onnx",
+  );
+
+  const versioned = await request.get(
+    "/pressay/silero-vad/v4/silero_vad_v4.onnx",
+    {
+      headers: { host: "models.press-say.app" },
+      maxRedirects: 0,
+    },
+  );
+  expect(versioned.status()).toBe(308);
+  expect(versioned.headers()["cache-control"]).toContain("immutable");
+  expect(versioned.headers().location).toContain(
+    "/YoannDrx/pressay/v2.0.0-beta.3/src-tauri/resources/models/silero_vad_v4.onnx",
+  );
+});
 
 test("French landing exposes the product contract and metadata", async ({ page }) => {
   const response = await page.goto("/fr");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Votre Mac");
   await expect(page.getByText("presse-papiers", { exact: false }).first()).toBeVisible();
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
+  const structuredData = await page
+    .locator('script[type="application/ld+json"]')
+    .textContent();
+  const offers = (JSON.parse(structuredData ?? "{}") as { offers?: Array<{ name: string }> })
+    .offers ?? [];
+  expect(offers.map((offer) => offer.name)).toEqual(
+    isCommercialLaunchEnabled ? ["Free", "Pro monthly", "Pro annual"] : ["Free"],
+  );
   expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
   await page.keyboard.press("Tab");
   await expect(page.locator(":focus-visible")).toBeVisible();
+});
+
+test("checkout result pages never grant Pro from a browser redirect", async ({ page }) => {
+  await page.goto("/checkout/success");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "en cours de confirmation",
+  );
+  await expect(page.getByText("ne suffit jamais à accorder un droit")).toBeVisible();
+
+  await page.goto("/checkout/cancel");
+  await expect(page.getByText("dictée locale Free")).toBeVisible();
+  await expect(page.getByText("BYOK")).toHaveCount(0);
 });
 
 test("landing navigation and compatibility marquee are accessible", async ({ page }) => {
   await page.goto("/fr");
   await expect(page.getByLabel("Choisir la langue")).toContainText("FR");
   await expect(page.getByLabel("Applications compatibles")).toContainText("Slack");
-  await expect(page.locator(".app-logo-card svg")).toHaveCount(26);
+  const brandIcons = page.locator(".app-logo-card .brand-icon");
+  await expect(brandIcons).toHaveCount(26);
+  await expect(brandIcons.first()).toHaveCSS("background-image", /data:image\/svg\+xml/);
   await expect(page.getByRole("link", { name: "GitHub" })).toHaveCount(0);
 });
 
@@ -36,11 +164,26 @@ test("desktop secure-input help URL resolves to localized private guidance", asy
 test("processing routes stay explicit and keyboard operable", async ({ page }) => {
   await page.goto("/en");
   const routes = page.getByRole("group", { name: "Processing route" });
-  await expect(routes.getByRole("button")).toHaveCount(4);
+  const expectedRoutes = [
+    "Local",
+    ...(validatedCommercialCapabilities.has("apple_intelligence") ? ["Apple Intelligence"] : []),
+    ...(validatedCommercialCapabilities.has("byok") ? ["BYOK"] : []),
+    ...(validatedCommercialCapabilities.has("pressay_cloud") ? ["Pressay Cloud"] : []),
+  ];
+  await expect(routes.getByRole("button")).toHaveCount(expectedRoutes.length);
   await expect(routes.getByRole("button", { name: "Local" })).toHaveAttribute("aria-pressed", "true");
-  await routes.getByRole("button", { name: "BYOK" }).click();
-  await expect(routes.getByRole("button", { name: "BYOK" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByText("Your key stays in Keychain and the Voice Bar names the selected provider.", { exact: true })).toBeVisible();
+  for (const route of expectedRoutes) {
+    await expect(routes.getByRole("button", { name: route, exact: true })).toBeVisible();
+  }
+  if (expectedRoutes.length === 1) {
+    await expect(routes.getByRole("button", { name: "BYOK" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "One voice. One validated route." })).toBeVisible();
+  } else if (expectedRoutes.includes("BYOK")) {
+    await routes.getByRole("button", { name: "BYOK", exact: true }).click();
+    await expect(routes.getByRole("button", { name: "BYOK", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".route-console-core strong")).toHaveText("BYOK");
+    await expect(page.locator(".route-console")).toHaveAttribute("data-route", "byok");
+  }
 });
 
 test("immersive motion has a complete reduced-motion fallback", async ({ page }) => {
@@ -78,10 +221,18 @@ test("English routes expose factual pricing and the current launch state", async
   await expect(page.getByRole("row", { name: /Superwhisper/ })).toContainText("$249.99");
   if (isCommercialLaunchEnabled) {
     await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(0);
-    expect(await page.getByRole("button", { name: /€69|€7\.99/ }).count()).toBeGreaterThan(0);
+    const checkoutButtons = page.getByRole("button", { name: /€69|€7\.99/ });
+    expect(await checkoutButtons.count()).toBeGreaterThan(0);
+    await expect(checkoutButtons.first()).toBeDisabled();
+    for (const consent of await page.getByRole("checkbox").all()) await consent.check();
+    await expect(checkoutButtons.first()).toBeEnabled();
   } else {
     await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(1);
     await expect(page.getByRole("button", { name: /€69|€7\.99/ })).toHaveCount(0);
+    if (!isProScopeValidated) {
+      await expect(page.getByText("The Pro scope will be published", { exact: false })).toBeVisible();
+      await expect(page.getByText("Apple Intelligence and BYOK", { exact: true })).toHaveCount(0);
+    }
   }
 });
 

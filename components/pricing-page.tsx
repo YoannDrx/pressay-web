@@ -1,10 +1,19 @@
 import { ContentPage } from "@/components/content-page";
 import { Pricing } from "@/components/pricing";
 import type { Locale } from "@/lib/content";
+import { publicReleaseCapabilities } from "@/lib/public-release-capabilities";
 
 export function PricingPage({ locale }: { locale: Locale }) {
   const fr = locale === "fr";
-  return <ContentPage locale={locale} eyebrow="PRICING / AUG 2026" title={fr ? "Le local reste gratuit. Pro va plus loin." : "Local stays free. Pro goes further."} intro={fr ? "Free reste illimité en local et sans compte. Pro déverrouille les commandes avancées, Apple Intelligence, BYOK, la synchronisation chiffrée et un quota Cloud explicite." : "Free stays unlimited locally and without an account. Pro unlocks advanced commands, Apple Intelligence, BYOK, encrypted sync and an explicit Cloud allowance."}>
+  const release = publicReleaseCapabilities();
+  const intro = release.proScopeValidated
+    ? fr
+      ? "Free reste illimité en local et sans compte. Pro ajoute les workflows avancés et les routes validées affichées avant traitement."
+      : "Free stays unlimited locally and without an account. Pro adds advanced workflows and validated routes shown before processing."
+    : fr
+      ? "Free reste illimité en local et sans compte. Le périmètre Pro sera publié lorsque chaque capacité commerciale aura passé ses validations."
+      : "Free stays unlimited locally and without an account. The Pro scope will be published after every commercial capability passes validation.";
+  return <ContentPage locale={locale} eyebrow="PRICING / AUG 2026" title={fr ? "Le local reste gratuit. Pro va plus loin." : "Local stays free. Pro goes further."} intro={intro}>
     <Pricing locale={locale} />
     <section className="comparison"><h2>{fr ? "Comparaison factuelle" : "Factual comparison"}</h2><div className="table-scroll"><table><thead><tr><th>Produit</th><th>Free</th><th>Pro mensuel</th><th>Annuel</th><th>Lifetime</th><th>{fr ? "Angle" : "Focus"}</th></tr></thead><tbody>
       <tr className="our-row"><th>Pressay</th><td>{fr ? "Local illimité" : "Unlimited local"}</td><td>7,99 €</td><td>69 €</td><td>—</td><td>{fr ? "Voice OS local, routes visibles" : "Local Voice OS, visible routes"}</td></tr>

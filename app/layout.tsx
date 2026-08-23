@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
-import { identityProvider } from "@/lib/auth-env";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,8 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const body = <html lang="fr" data-scroll-behavior="smooth"><body>{children}</body></html>;
-  return identityProvider() === "clerk"
-    ? <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>{body}</ClerkProvider>
-    : body;
+  return <html lang="fr" data-scroll-behavior="smooth"><body>{children}</body></html>;
 }

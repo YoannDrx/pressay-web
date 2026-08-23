@@ -2,7 +2,9 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { SignJWT } from "jose";
 import { auth } from "@/lib/auth";
+import { bootstrapWebAccount } from "@/lib/account-bootstrap";
 import { identityProvider } from "@/lib/auth-env";
+import { publicReleaseCapabilities } from "@/lib/public-release-capabilities";
 import { getWebIdentity, type WebIdentity } from "@/lib/server-identity";
 
 export function commercialIsConfigured(): boolean {
@@ -12,8 +14,7 @@ export function commercialIsConfigured(): boolean {
 }
 
 export function commercialCheckoutIsEnabled(): boolean {
-  return commercialIsConfigured()
-    && process.env.COMMERCIAL_CHECKOUT_ENABLED === "true";
+  return commercialIsConfigured() && publicReleaseCapabilities().commercialOfferReady;
 }
 
 export async function pressayAPI(
@@ -34,9 +35,7 @@ export async function pressayAPI(
   headers.set("X-Request-ID", randomUUID());
   if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (options.bootstrap) {
-    const bootstrap = await fetch(`${base}/accounts/bootstrap`, {
-      method: "POST", headers, cache: "no-store"
-    });
+    const bootstrap = await bootstrapWebAccount(base, headers);
     if (!bootstrap.ok && bootstrap.status !== 409) return bootstrap;
   }
   return fetch(`${base}/${path.replace(/^\/+/, "")}`, {
