@@ -102,6 +102,18 @@ export const authOptions = {
   advanced: {
     cookiePrefix: "pressay_auth",
     useSecureCookies: process.env.NODE_ENV === "production",
+    cookies: {
+      // Sign in with Apple returns through a cross-site form_post. Scope this
+      // exception to the short-lived signed OAuth state cookie; session
+      // cookies keep Better Auth's SameSite=Lax default.
+      state: {
+        attributes: {
+          httpOnly: true,
+          sameSite: "none",
+          secure: true
+        }
+      }
+    },
     ipAddress: {
       ipAddressHeaders: ["x-vercel-forwarded-for", "x-forwarded-for"]
     }
