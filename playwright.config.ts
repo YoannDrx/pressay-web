@@ -21,7 +21,12 @@ const localServerEnvironment = commercialLaunchFixture
 export default defineConfig({
   testDir: "./tests",
   timeout: 60_000,
-  fullyParallel: true,
+  // Next.js compiles the identity and billing routes on first access. Running
+  // every test in this single spec concurrently can make those fail-closed
+  // checks hit their timeout on a cold machine even though the routes answer
+  // correctly. Keep each project serial while still allowing desktop and
+  // mobile to run side by side.
+  fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: "list",
