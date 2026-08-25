@@ -23,7 +23,7 @@ export default async function LegalPageRoute({ params }: { params: Promise<{ loc
         {page.sections.map((section, index) => <section id={`section-${index + 1}`} key={section.title}><span>{String(index + 1).padStart(2, "0")}</span><h2>{section.title}</h2>{section.paragraphs?.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{section.bullets ? <ul>{section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul> : null}</section>)}
         {legal === "support" ? <SupportLinks locale={lang} /> : null}
         {legal === "withdrawal" ? <WithdrawalActions locale={lang} /> : null}
-        <footer className="legal-updated">{lang === "fr" ? "Dernière mise à jour : 21 août 2026." : "Last updated: August 21, 2026."}</footer>
+        <footer className="legal-updated">{lang === "fr" ? "Dernière mise à jour : 25 août 2026." : "Last updated: August 25, 2026."}</footer>
       </article>
     </div>
   </ContentPage>;
@@ -56,8 +56,8 @@ function WithdrawalActions({ locale }: { locale: Locale }) { return <div classNa
 function documentFor(locale: Locale, page: LegalPage): { title: string; intro: string; summary: string; sections: Section[] } {
   const fr = locale === "fr";
   const commonIdentity = fr
-    ? "Pressay est édité et développé par Yoann Andrieux, Entrepreneur individuel, sous la marque YoDev, 11 rue de la Chine, 75020 Paris, France."
-    : "Pressay is published and developed by Yoann Andrieux, sole trader, under the YoDev brand, 11 rue de la Chine, 75020 Paris, France.";
+    ? "Pressay est édité et développé par Yoann Andrieux, Entrepreneur individuel, sous la marque YoDev, 7 allée des Jonquilles, 95130 Franconville, France."
+    : "Pressay is published and developed by Yoann Andrieux, sole trader, under the YoDev brand, 7 allée des Jonquilles, 95130 Franconville, France.";
   const documents: Record<LegalPage, { title: string; intro: string; summary: string; sections: Section[] }> = {
     legal: fr ? {
       title: "Mentions légales", intro: "L’identité de l’éditeur, de l’hébergeur et les informations commerciales de Pressay.", summary: "Pressay est un logiciel macOS édité en France par YoDev.", sections: [
