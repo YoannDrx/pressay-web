@@ -1,5 +1,5 @@
 const repository = "YoannDrx/pressay";
-const fallbackTag = "v2.0.0-beta.3";
+const fallbackTag = "v2.0.0-beta.4";
 
 export type PublicRelease = {
   tag: string;

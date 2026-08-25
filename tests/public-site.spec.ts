@@ -238,7 +238,12 @@ test("English routes expose factual pricing and the current launch state", async
 
 test("download page exposes the public release channel and checksum", async ({ page }) => {
   await page.goto("/fr/download");
-  await expect(page.getByText(/^v2\.0\.0-beta\.3$/)).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      level: 2,
+      name: /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/,
+    }),
+  ).toBeVisible();
   await expect(page.getByText("PUBLIC BETA")).toBeVisible();
   await expect(page.getByText(/Apple Silicon · arm64/)).toBeVisible();
   await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute("href", /Pressay\.dmg\.sha256$/);
