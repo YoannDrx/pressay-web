@@ -238,8 +238,11 @@ test("English routes expose factual pricing and the current launch state", async
 
 test("download page exposes the public release channel and checksum", async ({ page }) => {
   await page.goto("/fr/download");
-  await expect(page.getByText(/^v2\.0\.0-beta\.3$/)).toBeVisible();
-  await expect(page.getByText("PUBLIC BETA")).toBeVisible();
+  const version = page.locator(".download-card h2");
+  await expect(version).toHaveText(/^v\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?$/);
+  const tag = await version.innerText();
+  await expect(page.getByText(tag.includes("-") ? "PUBLIC BETA" : "PUBLIC STABLE")).toBeVisible();
+  await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute("href", `https://github.com/YoannDrx/pressay/releases/download/${tag}/Pressay.dmg.sha256`);
   await expect(page.getByText(/Apple Silicon · arm64/)).toBeVisible();
   await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute("href", /Pressay\.dmg\.sha256$/);
 });
