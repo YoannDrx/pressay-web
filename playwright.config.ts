@@ -20,6 +20,7 @@ const localServerEnvironment = commercialLaunchFixture
 
 export default defineConfig({
   testDir: "./tests",
+  testMatch: "**/*.spec.ts",
   timeout: 60_000,
   // Next.js compiles the identity and billing routes on first access. Running
   // every test in this single spec concurrently can make those fail-closed

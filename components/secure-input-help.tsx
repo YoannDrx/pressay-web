@@ -72,9 +72,9 @@ export function SecureInputHelp({ locale }: { locale: Locale }) {
           <div className="legal-actions">
             <a
               className="button button-primary"
-              href="mailto:hello@press-say.app?subject=Pressay%20Secure%20Input"
+              href="mailto:yoann.andrieux@gmail.com?subject=%5BPressay%5D%20Secure%20Input"
             >
-              hello@press-say.app
+              yoann.andrieux@gmail.com
             </a>
             <Link className="button" href={`/${locale}/support`}>
               {fr ? "Tout le support" : "All support topics"}

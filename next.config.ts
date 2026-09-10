@@ -1,18 +1,20 @@
 import type { NextConfig } from "next";
 
+const isDevelopment = process.env.NODE_ENV === "development";
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
   "form-action 'self' https://checkout.stripe.com",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  "script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://clerk.press-say.app",
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://*.clerk.accounts.dev https://clerk.press-say.app`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://img.clerk.com",
   "font-src 'self' data:",
   "connect-src 'self' https://api.press-say.app https://api-staging.press-say.app https://*.clerk.accounts.dev https://clerk.press-say.app https://accounts.press-say.app",
   "frame-src 'self' https://*.clerk.accounts.dev https://clerk.press-say.app https://accounts.press-say.app https://checkout.stripe.com",
-  "upgrade-insecure-requests"
+  ...(isDevelopment ? [] : ["upgrade-insecure-requests"])
 ].join("; ");
 
 const modelRedirects = [
