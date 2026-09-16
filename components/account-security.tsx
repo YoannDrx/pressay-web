@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { authClient } from "@/lib/auth-client";
+import {
+  securityFailure,
+  type SecurityFeedback,
+} from "@/lib/security-feedback";
 
 type BrowserSession = {
   id: string;
@@ -23,7 +27,10 @@ export function AccountSecurity({
   const session = authClient.useSession();
   const passkeys = authClient.useListPasskeys();
   const [pending, setPending] = useState("");
-  const [message, setMessage] = useState("");
+  type Section = "passkeys" | "totp" | "sessions";
+  const [feedback, setFeedback] = useState<
+    Partial<Record<Section, SecurityFeedback>>
+  >({});
   const [totpURI, setTotpURI] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [sessions, setSessions] = useState<BrowserSession[]>(initialSessions);
@@ -35,31 +42,73 @@ export function AccountSecurity({
 
   useEffect(() => {
     let active = true;
-    void authClient.listSessions().then((result) => {
-      if (active && !result.error) setSessions(result.data);
-    });
+    void authClient
+      .listSessions()
+      .then((result) => {
+        if (active && !result.error) setSessions(result.data);
+      })
+      .catch(() => {
+        // Session-list availability must not block the security controls.
+      });
     return () => {
       active = false;
     };
   }, []);
 
+  function report(section: Section, value: SecurityFeedback) {
+    setFeedback((previous) => ({ ...previous, [section]: value }));
+  }
+
+  async function run(
+    action: string,
+    section: Section,
+    work: () => Promise<void>,
+  ) {
+    setPending(action);
+    setFeedback((previous) => ({ ...previous, [section]: undefined }));
+    try {
+      await work();
+    } catch (error) {
+      report(section, securityFailure(error, locale));
+    } finally {
+      setPending("");
+    }
+  }
+
+  function success(section: Section, fr: string, en: string) {
+    report(section, { tone: "success", text: tr(fr, en) });
+  }
+
   async function addPasskey() {
-    setPending("passkey");
-    setMessage("");
-    const result = await authClient.passkey.addPasskey({
-      name: `Mac · ${new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date())}`,
-      authenticatorAttachment: "platform",
+    await run("passkey", "passkeys", async () => {
+      if (!window.PublicKeyCredential || !window.isSecureContext) {
+        report("passkeys", {
+          tone: "error",
+          text: tr(
+            "Les clés d’accès ne sont pas disponibles dans ce navigateur. Ouvre cette page en HTTPS dans Safari ou Chrome à jour.",
+            "Passkeys are unavailable in this browser. Open this page over HTTPS in an up-to-date Safari or Chrome.",
+          ),
+        });
+        return;
+      }
+      report("passkeys", {
+        tone: "info",
+        text: tr(
+          "Confirme dans la fenêtre de ton navigateur avec Touch ID, ton téléphone ou une clé de sécurité. Cela peut prendre quelques instants.",
+          "Confirm in your browser’s prompt using Touch ID, your phone or a security key. This may take a moment.",
+        ),
+      });
+      const result = await authClient.passkey.addPasskey({
+        name: `Pressay · ${new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date())}`,
+      });
+      if (result.error) throw result.error;
+      success(
+        "passkeys",
+        "Clé d’accès enregistrée. Tu peux maintenant l’utiliser pour te connecter.",
+        "Passkey registered. You can now use it to sign in.",
+      );
+      await passkeys.refetch();
     });
-    setPending("");
-    setMessage(
-      result.error
-        ? tr(
-            "La clé d’accès n’a pas pu être enregistrée.",
-            "Unable to register the passkey.",
-          )
-        : tr("Clé d’accès enregistrée.", "Passkey registered."),
-    );
-    if (!result.error) await passkeys.refetch();
   }
 
   async function deletePasskey(id: string) {
@@ -69,68 +118,47 @@ export function AccountSecurity({
       )
     )
       return;
-    setPending(id);
-    setMessage("");
-    const result = await authClient.passkey.deletePasskey({ id });
-    setPending("");
-    setMessage(
-      result.error
-        ? tr("Suppression impossible.", "Unable to delete.")
-        : tr("Clé d’accès supprimée.", "Passkey deleted."),
-    );
-    if (!result.error) await passkeys.refetch();
+    await run(id, "passkeys", async () => {
+      const result = await authClient.passkey.deletePasskey({ id });
+      if (result.error) throw result.error;
+      success("passkeys", "Clé d’accès supprimée.", "Passkey deleted.");
+      await passkeys.refetch();
+    });
   }
 
   async function beginTOTP() {
-    setPending("totp-enable");
-    setMessage("");
-    const result = await authClient.twoFactor.enable({});
-    setPending("");
-    if (result.error) {
-      setMessage(
-        tr("L’activation TOTP n’a pas abouti.", "Unable to enable TOTP."),
-      );
-      return;
-    }
-    if (result.data.method !== "totp") {
-      setMessage(
-        tr(
-          "Le serveur n’a pas proposé de configuration TOTP.",
-          "TOTP setup is unavailable.",
+    await run("totp-enable", "totp", async () => {
+      const result = await authClient.twoFactor.enable({});
+      if (result.error) throw result.error;
+      if (result.data.method !== "totp") throw new Error("totp_unavailable");
+      setTotpURI(result.data.totpURI);
+      setBackupCodes(result.data.backupCodes);
+      report("totp", {
+        tone: "info",
+        text: tr(
+          "Dernière étape : saisis le code à 6 chiffres pour confirmer l’activation.",
+          "Final step: enter the 6-digit code to confirm activation.",
         ),
-      );
-      return;
-    }
-    setTotpURI(result.data.totpURI);
-    setBackupCodes(result.data.backupCodes);
+      });
+    });
   }
 
   async function verifyTOTP(formData: FormData) {
-    const code = String(formData.get("code") ?? "").replace(/[\s-]/g, "");
-    setPending("totp-verify");
-    setMessage("");
-    const result = await authClient.twoFactor.verifyTotp({
-      code,
-      trustDevice: false,
-    });
-    setPending("");
-    if (result.error) {
-      setMessage(
-        tr(
-          "Code incorrect. Vérifie l’heure de ton appareil puis réessaie.",
-          "Incorrect code. Check your device clock and try again.",
-        ),
+    await run("totp-verify", "totp", async () => {
+      const code = String(formData.get("code") ?? "").replace(/[\s-]/g, "");
+      const result = await authClient.twoFactor.verifyTotp({
+        code,
+        trustDevice: false,
+      });
+      if (result.error) throw result.error;
+      setTotpURI("");
+      success(
+        "totp",
+        "Authenticator activé et vérifié. Conserve tes codes de secours hors ligne.",
+        "Authenticator enabled and verified. Keep your backup codes offline.",
       );
-      return;
-    }
-    setTotpURI("");
-    setMessage(
-      tr(
-        "Validation TOTP activée. Conserve les codes de secours hors ligne.",
-        "TOTP enabled. Keep your backup codes offline.",
-      ),
-    );
-    await session.refetch();
+      await session.refetch();
+    });
   }
 
   async function regenerateBackupCodes() {
@@ -143,15 +171,16 @@ export function AccountSecurity({
       )
     )
       return;
-    setPending("backup");
-    setMessage("");
-    const result = await authClient.twoFactor.generateBackupCodes({});
-    setPending("");
-    if (result.error)
-      setMessage(
-        tr("Impossible de régénérer les codes.", "Unable to regenerate codes."),
+    await run("backup", "totp", async () => {
+      const result = await authClient.twoFactor.generateBackupCodes({});
+      if (result.error) throw result.error;
+      setBackupCodes(result.data.backupCodes);
+      success(
+        "totp",
+        "Nouveaux codes créés. Les anciens codes ne sont plus valides.",
+        "New backup codes created. Previous codes are no longer valid.",
       );
-    else setBackupCodes(result.data.backupCodes);
+    });
   }
 
   async function disableTOTP() {
@@ -161,54 +190,82 @@ export function AccountSecurity({
       )
     )
       return;
-    setPending("totp-disable");
-    setMessage("");
-    const result = await authClient.twoFactor.disable({});
-    setPending("");
-    setMessage(
-      result.error
-        ? tr("Désactivation impossible.", "Unable to disable TOTP.")
-        : tr("Validation TOTP désactivée.", "TOTP disabled."),
-    );
-    if (!result.error) {
+    await run("totp-disable", "totp", async () => {
+      const result = await authClient.twoFactor.disable({});
+      if (result.error) throw result.error;
       setBackupCodes([]);
+      success("totp", "Authenticator désactivé.", "Authenticator disabled.");
       await session.refetch();
-    }
+    });
   }
 
   const twoFactorEnabled = session.data?.user.twoFactorEnabled === true;
   async function revokeSession(token: string) {
-    setPending(token);
-    setMessage("");
-    const result = await authClient.revokeSession({ token });
-    setPending("");
-    setMessage(
-      result.error
-        ? tr(
-            "Cette session n’a pas pu être révoquée.",
-            "Unable to revoke this session.",
-          )
-        : tr("Session révoquée.", "Session revoked."),
-    );
-    if (!result.error) await loadSessions();
+    await run(token, "sessions", async () => {
+      const result = await authClient.revokeSession({ token });
+      if (result.error) throw result.error;
+      success("sessions", "Session révoquée.", "Session revoked.");
+      await loadSessions();
+    });
   }
 
-  async function signOut() {
-    await authClient.signOut();
-    window.location.assign(`/${locale}`);
+  async function signOut(
+    reauthenticate = false,
+    section: Section = "sessions",
+  ) {
+    await run("signout", section, async () => {
+      const result = await authClient.signOut();
+      if (result.error) throw result.error;
+      window.location.assign(
+        reauthenticate
+          ? `/sign-in?locale=${locale}&redirect_url=%2Faccount%2Fsecurity`
+          : `/${locale}`,
+      );
+    });
+  }
+
+  function notice(section: Section) {
+    const value = feedback[section];
+    return value ? (
+      <div className={`security-feedback security-feedback--${value.tone}`}>
+        <p role={value.tone === "error" ? "alert" : "status"}>{value.text}</p>
+        {value.reauthenticate ? (
+          <button
+            className="button button-small"
+            disabled={Boolean(pending)}
+            onClick={() => signOut(true, section)}
+          >
+            {tr("Se reconnecter pour continuer", "Sign in again to continue")}
+          </button>
+        ) : null}
+      </div>
+    ) : null;
   }
 
   return (
     <div className="security-settings">
-      <section className="security-setting-card">
+      <section
+        className="security-setting-card"
+        aria-labelledby="passkeys-title"
+      >
         <span className="mono-label">PASSKEY / WEBAUTHN</span>
-        <h1>{tr("Clés d’accès", "Passkeys")}</h1>
+        <h2 id="passkeys-title">{tr("Clés d’accès", "Passkeys")}</h2>
         <p>
           {tr(
             "Utilise Touch ID ou une clé de sécurité. La clé privée ne quitte jamais ton appareil.",
             "Use Touch ID or a security key. Your private key never leaves your device.",
           )}
         </p>
+        {passkeys.isPending ? (
+          <p role="status">{tr("Chargement des clés…", "Loading passkeys…")}</p>
+        ) : passkeys.error ? (
+          <p role="alert">
+            {tr(
+              "Impossible de charger tes clés d’accès. Recharge la page pour réessayer.",
+              "Unable to load your passkeys. Reload the page to retry.",
+            )}
+          </p>
+        ) : null}
         <div className="security-key-list">
           {passkeys.data?.map((key) => (
             <div key={key.id}>
@@ -228,7 +285,7 @@ export function AccountSecurity({
               </button>
             </div>
           ))}
-          {!passkeys.isPending && !passkeys.data?.length ? (
+          {!passkeys.isPending && !passkeys.error && !passkeys.data?.length ? (
             <p>{tr("Aucune clé enregistrée.", "No passkeys registered.")}</p>
           ) : null}
         </div>
@@ -241,18 +298,41 @@ export function AccountSecurity({
             ? tr("Enregistrement…", "Registering…")
             : tr("Ajouter une clé d’accès", "Add a passkey")}
         </button>
+        {notice("passkeys")}
       </section>
 
-      <section className="security-setting-card">
+      <section className="security-setting-card" aria-labelledby="totp-title">
         <span className="mono-label">TOTP / ADMIN STEP-UP</span>
-        <h2>{tr("Validation forte TOTP", "Authenticator verification")}</h2>
+        <h2 id="totp-title">
+          {tr("Application Authenticator", "Authenticator app")}
+        </h2>
+        <p
+          className={`security-state ${twoFactorEnabled ? "security-state--active" : ""}`}
+          role="status"
+        >
+          {session.isPending
+            ? tr("Vérification de l’état…", "Checking status…")
+            : session.error
+              ? tr("État indisponible", "Status unavailable")
+              : twoFactorEnabled
+                ? tr("✓ Activé et vérifié", "✓ Enabled and verified")
+                : totpURI
+                  ? tr(
+                      "Activation à confirmer",
+                      "Activation awaiting confirmation",
+                    )
+                  : tr("Non configuré", "Not configured")}
+        </p>
         <p>
           {tr(
-            "Un code d’application Authenticator est exigé avant chaque opération administrative sensible. Google conserve ses propres règles de connexion ; une passkey fournit une connexion résistante au phishing.",
-            "An authenticator code is required before sensitive administrative actions. You can also protect your sign-in with two-factor authentication.",
+            "Une fois activé, Authenticator reste configuré sur ton compte. Dans l’administration, un nouveau code autorise les actions sensibles pendant 10 minutes. Google conserve ses propres règles de connexion.",
+            "Once enabled, Authenticator stays configured on your account. In administration, a new code authorizes sensitive actions for 10 minutes. Google keeps its own sign-in rules.",
           )}
         </p>
-        {!twoFactorEnabled && !totpURI ? (
+        {!session.isPending &&
+        !session.error &&
+        !twoFactorEnabled &&
+        !totpURI ? (
           <button
             className="button"
             disabled={Boolean(pending)}
@@ -318,6 +398,7 @@ export function AccountSecurity({
             </button>
           </div>
         ) : null}
+        {notice("totp")}
         {backupCodes.length ? (
           <BackupCodes codes={backupCodes} locale={locale} />
         ) : null}
@@ -357,15 +438,15 @@ export function AccountSecurity({
             </div>
           ))}
         </div>
-        <button className="account-link-button danger" onClick={signOut}>
+        <button
+          className="account-link-button danger"
+          disabled={Boolean(pending)}
+          onClick={() => signOut()}
+        >
           {tr("Se déconnecter de cette session", "Sign out of this session")}
         </button>
+        {notice("sessions")}
       </section>
-      {message ? (
-        <output className="auth-message" role="status">
-          {message}
-        </output>
-      ) : null}
     </div>
   );
 }

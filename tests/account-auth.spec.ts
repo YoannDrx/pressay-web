@@ -166,3 +166,188 @@ test("logout in another tab removes the authenticated account view", async ({
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(page).toHaveURL(/\/sign-in/);
 });
+
+test("security shows persistent Authenticator status and explains stale passkey sessions inline", async ({
+  page,
+  context,
+}) => {
+  const cookie = (await context.cookies()).find(
+    (item) => item.name === "pressay_auth.session_token",
+  )!;
+  const token = decodeURIComponent(cookie.value).split(".")[0];
+  await pool.query(
+    'UPDATE auth_users SET "twoFactorEnabled"=true WHERE id=(SELECT "userId" FROM auth_sessions WHERE token=$1)',
+    [token],
+  );
+  await pool.query(
+    "UPDATE auth_sessions SET \"createdAt\"=now()-interval '11 minutes' WHERE token=$1",
+    [token],
+  );
+  await page.goto("/fr");
+  await page.goto("/account/security");
+  const totp = page.getByRole("region", { name: "Application Authenticator" });
+  await expect(
+    totp.getByText("✓ Activé et vérifié", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    totp.getByRole("button", { name: "Configurer une application" }),
+  ).toHaveCount(0);
+  const keys = page.getByRole("region", { name: "Clés d’accès" });
+  await keys.getByRole("button", { name: "Ajouter une clé d’accès" }).click();
+  await expect(keys.getByRole("alert")).toContainText("connexion récente");
+  await expect(
+    keys.getByRole("button", { name: "Ajouter une clé d’accès" }),
+  ).toBeEnabled();
+  await expect(
+    keys.getByRole("button", { name: "Se reconnecter pour continuer" }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    totp.getByText("✓ Activé et vérifié", { exact: true }),
+  ).toBeVisible();
+});
+
+test("security registers a passkey through WebAuthn and keeps it after reload", async ({
+  page,
+  context,
+}) => {
+  const cookie = (await context.cookies()).find(
+    (item) => item.name === "pressay_auth.session_token",
+  )!;
+  await context.addCookies([
+    {
+      name: cookie.name,
+      value: cookie.value,
+      url: "http://localhost:31972",
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("WebAuthn.enable");
+  const { authenticatorId } = await cdp.send(
+    "WebAuthn.addVirtualAuthenticator",
+    {
+      options: {
+        protocol: "ctap2",
+        transport: "usb",
+        hasResidentKey: true,
+        hasUserVerification: true,
+        isUserVerified: true,
+        automaticPresenceSimulation: true,
+      },
+    },
+  );
+  try {
+    await page.goto("http://localhost:31972/fr");
+    await page.goto("http://localhost:31972/account/security");
+    const keys = page.getByRole("region", { name: "Clés d’accès" });
+    await expect(keys.getByText("Aucune clé enregistrée.")).toBeVisible();
+    await keys.getByRole("button", { name: "Ajouter une clé d’accès" }).click();
+    await expect(
+      keys.getByText(
+        "Clé d’accès enregistrée. Tu peux maintenant l’utiliser pour te connecter.",
+      ),
+    ).toBeVisible();
+    await expect(
+      keys.getByRole("button", { name: "Supprimer", exact: true }),
+    ).toHaveCount(1);
+    await page.reload();
+    await expect(
+      keys.getByRole("button", { name: "Supprimer", exact: true }),
+    ).toHaveCount(1);
+    await page.screenshot({
+      path: test.info().outputPath("security-passkey.png"),
+      fullPage: true,
+    });
+  } finally {
+    await cdp.send("WebAuthn.removeVirtualAuthenticator", { authenticatorId });
+    await cdp.detach();
+  }
+});
+
+test("security distinguishes a passkey list outage from an empty list", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/passkey/list-user-passkeys", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ code: "UNAVAILABLE" }),
+    }),
+  );
+  await page.goto("/fr");
+  await page.goto("/account/security");
+  const keys = page.getByRole("region", { name: "Clés d’accès" });
+  await expect(keys.getByRole("alert")).toContainText("Impossible de charger");
+  await expect(keys.getByText("Aucune clé enregistrée.")).toHaveCount(0);
+});
+
+test("security confirms TOTP enrollment and preserves admin verification after reload", async ({
+  page,
+}) => {
+  await page.goto("/fr");
+  await page.goto("/account/security");
+  const totp = page.getByRole("region", { name: "Application Authenticator" });
+  await totp
+    .getByRole("button", { name: "Configurer une application" })
+    .click();
+  await expect(
+    totp.getByText("Activation à confirmer", { exact: true }),
+  ).toBeVisible();
+  const uri = await totp
+    .getByRole("link", { name: "Ouvrir dans l’application Authenticator" })
+    .getAttribute("href");
+  const secret = new URL(uri!).searchParams.get("secret")!;
+  // The secret belongs only to this freshly-created local PostgreSQL fixture.
+  const bits = [...secret.toUpperCase().replace(/=+$/, "")]
+    .map((c) =>
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+        .indexOf(c)
+        .toString(2)
+        .padStart(5, "0"),
+    )
+    .join("");
+  const key = Buffer.from(bits.match(/.{8}/g)!.map((b) => parseInt(b, 2)));
+  const generate = () => {
+    const counter = Buffer.alloc(8);
+    counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
+    const hash = createHmac("sha1", key).update(counter).digest();
+    const offset = hash[hash.length - 1] & 15;
+    return String((hash.readUInt32BE(offset) & 0x7fffffff) % 1000000).padStart(
+      6,
+      "0",
+    );
+  };
+  await totp.getByLabel("Code à 6 chiffres").fill(generate());
+  await totp.getByRole("button", { name: "Valider et activer" }).click();
+  await expect(
+    totp.getByText("✓ Activé et vérifié", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    totp.getByText(
+      "Authenticator activé et vérifié. Conserve tes codes de secours hors ligne.",
+    ),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    totp.getByText("✓ Activé et vérifié", { exact: true }),
+  ).toBeVisible();
+  await page.goto("/admin");
+  await page
+    .getByText("Valider les actions sensibles", { exact: true })
+    .click();
+  await page.getByLabel("Validation forte", { exact: true }).fill(generate());
+  await page.getByRole("button", { name: "Valider 10 min" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Actions sensibles autorisées" }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Actions sensibles autorisées" }),
+  ).toBeVisible();
+});

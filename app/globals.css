@@ -271,3 +271,17 @@ body:has(.immersive-home) .site-header .button-small { min-height:38px; border-r
 .account-content .account-card dl { margin:18px 0 22px; }
 .admin-security { margin-top:18px; } .admin-security summary { cursor:pointer; padding:10px 0; font-size:13px; } .admin-step-up select { width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; background:#0e0d12; color:white; }
 @media(max-width:1000px) { .admin-shell { display:block; } .admin-sidebar { position:static; height:auto; width:100%; display:grid; grid-template-columns:1fr auto; gap:16px; padding:20px; overflow:visible; border-right:0; border-bottom:1px solid var(--line); } .admin-sidebar nav { grid-column:1/-1; display:flex; overflow-x:auto; min-width:0; margin:0; padding-bottom:6px; } .admin-sidebar nav a { font-size:13px; white-space:nowrap; } .admin-sidebar nav a:before { display:none; } .admin-sidebar .admin-privacy { display:none; } .admin-security { grid-column:1/-1; margin:0; } .admin-security .admin-step-up { max-width:440px; } .admin-sidebar>.session-menu { grid-column:2; grid-row:1; } .admin-sidebar>.brand { grid-column:1; grid-row:1; } .admin-main { padding:32px 18px 70px; } }
+
+.security-setting-card .security-state { display:inline-flex; align-items:center; margin:0 0 12px; padding:7px 12px; border-radius:999px; background:#302a38; color:#e2dbea; font-size:14px; font-weight:600; }
+.security-setting-card .security-state--active { background:#143d31; color:#a7f3cf; }
+.security-feedback { margin-top:18px; padding:14px 16px; border:1px solid #52505c; border-radius:10px; background:#211e29; }
+.security-feedback p { margin:0; }
+.security-feedback--success { border-color:#37715c; background:#142e25; }
+.security-feedback--success p { color:#b1f0d2; }
+.security-feedback--error { border-color:#8d4c55; background:#321e25; }
+.security-feedback--error p { color:#ffc0c7; }
+.security-feedback .button { margin-top:12px; }
+.admin-security>.security-state { margin:0 0 8px; font-size:12px; line-height:1.5; color:#c8c0d1; }
+.admin-security>.security-state--active { color:#a7f3cf; }
+.admin-security details>p { color:#b3aabd; font-size:12px; line-height:1.5; }
+@media(min-width:1001px) { .admin-sidebar { overflow-y:auto; overscroll-behavior:contain; } }

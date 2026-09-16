@@ -20,7 +20,8 @@ export default async function Layout({
 }: {
   children: React.ReactNode;
 }) {
-  if (!(await getWebIdentity())) redirect("/sign-in?redirect_url=/admin");
+  const identity = await getWebIdentity();
+  if (!identity) redirect("/sign-in?redirect_url=/admin");
   const access = await pressayAPI("admin/session").catch(() => null);
   if (!access?.ok)
     return (
@@ -60,10 +61,11 @@ export default async function Layout({
         <div className="admin-privacy">
           Comptes et données serveur.<strong>Aucune dictée locale.</strong>
         </div>
-        <details className="admin-security">
-          <summary>Validation des actions sensibles</summary>
-          <AdminStepUp />
-        </details>
+        <AdminStepUp
+          initialExpiresAt={
+            identity.stepUpAt ? (identity.stepUpAt + 600) * 1000 : 0
+          }
+        />
         <SessionNavigation locale={await accountLocale()} />
         <Link href="/account">← Mon compte</Link>
       </aside>
