@@ -1,14 +1,93 @@
+import Link from "next/link";
 import { AdminHeading } from "@/components/admin-heading";
-import { AdminReferralActions } from "@/components/admin-referral-actions";
-import { pressayJSON } from "@/lib/pressay-api";
-
-type Referral = { id: string; code: string; referrer_account_id: string; referee_account_id: string; status: string; source: string; risk_status: string; rejection_reason: string | null; attributed_at: string; expires_at: string; reward_count: number; pending_rewards: number; applied_rewards: number; failed_rewards: number; last_error_code: string | null };
-export default async function AdminReferralsPage() {
-  const { data } = await pressayJSON<{ referrals: Referral[] }>("admin/referrals");
-  return <>
-    <AdminHeading eyebrow="REFERRAL / 30 + 30" title="Parrainages" detail="Funnel attribution → premier paiement → récompenses, sans fingerprint publicitaire." />
-    <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Code</th><th>Parrain</th><th>Filleul</th><th>Statut</th><th>Récompenses</th><th>Attribution</th><th>Fenêtre</th><th>Actions</th></tr></thead><tbody>{data?.referrals.map((referral) => <tr key={referral.id}><td><strong>{referral.code}</strong><small>{referral.source}</small></td><td><code>{referral.referrer_account_id.slice(0, 8)}</code></td><td><code>{referral.referee_account_id.slice(0, 8)}</code></td><td><span className="admin-pill">{referral.status}</span><small>{referral.risk_status}{referral.rejection_reason ? ` · ${referral.rejection_reason}` : ""}</small></td><td className={referral.failed_rewards ? "admin-danger" : ""}>{referral.applied_rewards} appliquée(s) · {referral.pending_rewards} en attente · {referral.failed_rewards} erreur(s){referral.last_error_code ? <small>{referral.last_error_code}</small> : null}</td><td>{date(referral.attributed_at)}</td><td>{date(referral.expires_at)}</td><td><AdminReferralActions referralID={referral.id} riskStatus={referral.risk_status} failedRewards={referral.failed_rewards} /></td></tr>)}</tbody></table></div>
-    {!data?.referrals.length ? <div className="admin-empty">Aucune attribution pour le moment.</div> : null}
-  </>;
+import { AdminActionForm } from "@/components/admin-action-form";
+import { adminData, AdminTable, adminDate } from "@/components/admin-data";
+type Referral = {
+  id: string;
+  referrer_id: string;
+  referee_id: string;
+  referrer_email: string;
+  referee_email: string;
+  status: string;
+  attributed_at: string;
+  expires_at: string;
+  rewards: {
+    id: string;
+    side: string;
+    status: string;
+    kind: string;
+    amount_minor: number | null;
+    last_error_code: string | null;
+  }[];
+};
+export default async function Page() {
+  const { data, error } = await adminData<{ referrals: Referral[] }>(
+    "admin/referrals",
+  );
+  return (
+    <>
+      <AdminHeading
+        eyebrow="PARRAINAGE / STRIPE"
+        title="Parrainages"
+        detail="Attribution de 30 jours, premier paiement encaissé, récompenses persistantes. Les crédits au résultat incertain exigent une réconciliation manuelle."
+      />
+      <p>
+        La file est traitée quotidiennement. Tu peux aussi lancer un lot ici
+        après validation forte.
+      </p>
+      <AdminActionForm
+        endpoint="/api/pressay/admin/rewards/process"
+        title="Traiter les récompenses en attente"
+        submitLabel="Traiter un lot"
+        fields={[{ name: "reason", label: "Motif", required: true }]}
+      />
+      {error}
+      {data ? (
+        <AdminTable
+          headers={[
+            "Parrain",
+            "Filleul",
+            "État",
+            "Attribution",
+            "Expiration",
+            "Récompenses",
+          ]}
+          rows={data.referrals.map((r) => [
+            <Link key="from" href={`/admin/users/${r.referrer_id}`}>
+              {r.referrer_email ?? r.referrer_id}
+            </Link>,
+            <Link key="to" href={`/admin/users/${r.referee_id}`}>
+              {r.referee_email ?? r.referee_id}
+            </Link>,
+            r.status,
+            adminDate(r.attributed_at),
+            adminDate(r.expires_at),
+            <div key="rewards">
+              {r.rewards.map((reward) => (
+                <div key={reward.id}>
+                  <p>
+                    {reward.side} · {reward.kind} · {reward.status}
+                    {reward.amount_minor
+                      ? ` · ${reward.amount_minor / 100} €`
+                      : ""}
+                  </p>
+                  <small>{reward.last_error_code}</small>
+                  {reward.status === "failed" ? (
+                    <AdminActionForm
+                      endpoint={`/api/pressay/admin/rewards/${reward.id}/retry`}
+                      title="Reprendre"
+                      submitLabel="Réessayer"
+                      fields={[
+                        { name: "reason", label: "Motif", required: true },
+                      ]}
+                    />
+                  ) : null}
+                </div>
+              ))}
+            </div>,
+          ])}
+        />
+      ) : null}
+    </>
+  );
 }
-function date(value: string) { return new Intl.DateTimeFormat("fr-FR", { dateStyle: "short" }).format(new Date(value)); }

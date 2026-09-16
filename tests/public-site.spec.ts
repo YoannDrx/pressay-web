@@ -49,7 +49,10 @@ test("commercial deployment boundary accepts only the canonical production graph
   ];
   for (const override of rejectedEnvironments) {
     expect(
-      commercialDeploymentStatus({ ...canonicalCommercialEnvironment, ...override }).ready,
+      commercialDeploymentStatus({
+        ...canonicalCommercialEnvironment,
+        ...override,
+      }).ready,
     ).toBe(false);
   }
 });
@@ -76,7 +79,11 @@ test("web bootstrap falls back only when the modern Cloud route is absent", asyn
     return new Response(null, { status: requests.length === 1 ? 404 : 204 });
   };
 
-  await bootstrapWebAccount("https://legacy.example/v1", new Headers(), fetcher);
+  await bootstrapWebAccount(
+    "https://legacy.example/v1",
+    new Headers(),
+    fetcher,
+  );
   expect(requests).toEqual([
     "https://legacy.example/v1/accounts/web-bootstrap",
     "https://legacy.example/v1/accounts/bootstrap",
@@ -109,43 +116,67 @@ test("the documented Silero VAD URL resolves through an immutable versioned rout
   );
 });
 
-test("French landing exposes the product contract and metadata", async ({ page }) => {
+test("French landing exposes the product contract and metadata", async ({
+  page,
+}) => {
   const response = await page.goto("/fr");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Votre Mac");
-  await expect(page.getByText("presse-papiers", { exact: false }).first()).toBeVisible();
-  await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "Là où tu peux écrire",
+  );
+  await expect(
+    page.getByText("presse-papiers", { exact: false }).first(),
+  ).toBeVisible();
+  await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(
+    1,
+  );
   const structuredData = await page
     .locator('script[type="application/ld+json"]')
     .textContent();
-  const offers = (JSON.parse(structuredData ?? "{}") as { offers?: Array<{ name: string }> })
-    .offers ?? [];
+  const offers =
+    (JSON.parse(structuredData ?? "{}") as { offers?: Array<{ name: string }> })
+      .offers ?? [];
   expect(offers.map((offer) => offer.name)).toEqual(
-    isCommercialLaunchEnabled ? ["Free", "Pro monthly", "Pro annual"] : ["Free"],
+    isCommercialLaunchEnabled
+      ? ["Free", "Pro monthly", "Pro annual"]
+      : ["Free"],
   );
-  expect(response?.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(response?.headers()["content-security-policy"]).toContain(
+    "frame-ancestors 'none'",
+  );
   await page.keyboard.press("Tab");
   await expect(page.locator(":focus-visible")).toBeVisible();
 });
 
-test("checkout result pages never grant Pro from a browser redirect", async ({ page }) => {
+test("checkout result pages never grant Pro from a browser redirect", async ({
+  page,
+}) => {
   await page.goto("/checkout/success");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "en cours de confirmation",
   );
-  await expect(page.getByText("ne suffit jamais à accorder un droit")).toBeVisible();
+  await expect(
+    page.getByText("ne suffit jamais à accorder un droit"),
+  ).toBeVisible();
 
   await page.goto("/checkout/cancel");
   await expect(page.getByText("dictée locale Free")).toBeVisible();
   await expect(page.getByText("BYOK")).toHaveCount(0);
 });
 
-test("landing navigation and compatibility marquee are accessible", async ({ page }) => {
+test("landing navigation and compatibility marquee are accessible", async ({
+  page,
+}) => {
   await page.goto("/fr");
   await expect(page.getByLabel("Choisir la langue")).toContainText("FR");
-  await expect(page.getByLabel("Applications compatibles")).toContainText("Slack");
+  await expect(page.getByLabel("Applications compatibles")).toContainText(
+    "Slack",
+  );
   const brandIcons = page.locator(".app-logo-card .brand-icon");
   await expect(brandIcons).toHaveCount(26);
-  await expect(brandIcons.first()).toHaveCSS("background-image", /data:image\/svg\+xml/);
+  await expect(brandIcons.first()).toHaveCSS(
+    "background-image",
+    /data:image\/svg\+xml/,
+  );
   await expect(page.getByRole("link", { name: "GitHub" })).toHaveCount(0);
 });
 
@@ -158,50 +189,81 @@ test("desktop secure-input help URL resolves to localized private guidance", asy
   await expect(
     page.getByRole("heading", { level: 1, name: /secret|hors de portée/i }),
   ).toBeVisible();
-  await expect(page.getByText(/Keychain|Trousseau macOS/).first()).toBeVisible();
+  await expect(
+    page.getByText(/Keychain|Trousseau macOS/).first(),
+  ).toBeVisible();
 });
 
-test("processing routes stay explicit and keyboard operable", async ({ page }) => {
+test("processing routes stay explicit and keyboard operable", async ({
+  page,
+}) => {
   await page.goto("/en");
   const routes = page.getByRole("group", { name: "Processing route" });
   const expectedRoutes = [
     "Local",
-    ...(validatedCommercialCapabilities.has("apple_intelligence") ? ["Apple Intelligence"] : []),
+    ...(validatedCommercialCapabilities.has("apple_intelligence")
+      ? ["Apple Intelligence"]
+      : []),
     ...(validatedCommercialCapabilities.has("byok") ? ["BYOK"] : []),
-    ...(validatedCommercialCapabilities.has("pressay_cloud") ? ["Pressay Cloud"] : []),
+    ...(validatedCommercialCapabilities.has("pressay_cloud")
+      ? ["Pressay Cloud"]
+      : []),
   ];
   await expect(routes.getByRole("button")).toHaveCount(expectedRoutes.length);
-  await expect(routes.getByRole("button", { name: "Local" })).toHaveAttribute("aria-pressed", "true");
+  await expect(routes.getByRole("button", { name: "Local" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   for (const route of expectedRoutes) {
-    await expect(routes.getByRole("button", { name: route, exact: true })).toBeVisible();
+    await expect(
+      routes.getByRole("button", { name: route, exact: true }),
+    ).toBeVisible();
   }
   if (expectedRoutes.length === 1) {
     await expect(routes.getByRole("button", { name: "BYOK" })).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "One voice. One validated route." })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "One voice. One validated route." }),
+    ).toBeVisible();
   } else if (expectedRoutes.includes("BYOK")) {
     await routes.getByRole("button", { name: "BYOK", exact: true }).click();
-    await expect(routes.getByRole("button", { name: "BYOK", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      routes.getByRole("button", { name: "BYOK", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator(".route-console-core strong")).toHaveText("BYOK");
-    await expect(page.locator(".route-console")).toHaveAttribute("data-route", "byok");
+    await expect(page.locator(".route-console")).toHaveAttribute(
+      "data-route",
+      "byok",
+    );
   }
 });
 
-test("immersive motion has a complete reduced-motion fallback", async ({ page }) => {
+test("immersive motion has a complete reduced-motion fallback", async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/en");
   await expect(page.locator("[data-reveal]").first()).toHaveCSS("opacity", "1");
-  await expect(page.locator(".route-console-signal i").first()).toHaveCSS("animation-name", "none");
+  await expect(page.locator(".route-console-signal i").first()).toHaveCSS(
+    "animation-name",
+    "none",
+  );
   await expect(page.locator(".story-sticky")).toHaveCSS("position", "relative");
   await expect(page.locator(".story-progress")).toHaveCSS("display", "none");
 });
 
-test("expanded legal pages expose identity, privacy and withdrawal routes", async ({ page }) => {
+test("expanded legal pages expose identity, privacy and withdrawal routes", async ({
+  page,
+}) => {
   await page.goto("/fr/legal");
   await expect(page.getByText("803 272 590 00024")).toBeVisible();
   await page.goto("/fr/privacy");
-  await expect(page.getByRole("heading", { name: "Données exclues" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Données exclues" }),
+  ).toBeVisible();
   await page.goto("/fr/withdrawal");
-  await expect(page.getByRole("heading", { name: "Droit de rétractation" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Droit de rétractation" }),
+  ).toBeVisible();
 });
 
 test("locale-neutral commercial URLs resolve instead of returning 404", async ({
@@ -214,66 +276,119 @@ test("locale-neutral commercial URLs resolve instead of returning 404", async ({
   }
 });
 
-test("English routes expose factual pricing and the current launch state", async ({ page }) => {
+test("English routes expose factual pricing and the current launch state", async ({
+  page,
+}) => {
   await page.goto("/en/pricing");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Local stays free");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "Local stays free",
+  );
   await expect(page.getByRole("row", { name: /Pressay/ })).toContainText("€69");
-  await expect(page.getByRole("row", { name: /Superwhisper/ })).toContainText("$249.99");
+  await expect(page.getByRole("row", { name: /Superwhisper/ })).toContainText(
+    "$249.99",
+  );
   if (isCommercialLaunchEnabled) {
     await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(0);
     const checkoutButtons = page.getByRole("button", { name: /€69|€7\.99/ });
     expect(await checkoutButtons.count()).toBeGreaterThan(0);
     await expect(checkoutButtons.first()).toBeDisabled();
-    for (const consent of await page.getByRole("checkbox").all()) await consent.check();
+    for (const consent of await page.getByRole("checkbox").all())
+      await consent.check();
     await expect(checkoutButtons.first()).toBeEnabled();
   } else {
     await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(1);
-    await expect(page.getByRole("button", { name: /€69|€7\.99/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /€69|€7\.99/ })).toHaveCount(
+      0,
+    );
     if (!isProScopeValidated) {
-      await expect(page.getByText("The Pro scope will be published", { exact: false })).toBeVisible();
-      await expect(page.getByText("Apple Intelligence and BYOK", { exact: true })).toHaveCount(0);
+      await expect(
+        page.getByText("Features detailed before launch", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Apple Intelligence and BYOK", { exact: true }),
+      ).toHaveCount(0);
     }
   }
 });
 
-test("download page exposes the public release channel and checksum", async ({ page }) => {
+test("download page exposes the public release channel and checksum", async ({
+  page,
+}) => {
   await page.goto("/fr/download");
   const version = page.locator(".download-card h2");
   await expect(version).toHaveText(/^v\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?$/);
   const tag = await version.innerText();
-  await expect(page.getByText(tag.includes("-") ? "PUBLIC BETA" : "PUBLIC STABLE")).toBeVisible();
-  await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute("href", `https://github.com/YoannDrx/pressay/releases/download/${tag}/Pressay.dmg.sha256`);
+  await expect(
+    page.getByText(tag.includes("-") ? "PUBLIC BETA" : "PUBLIC STABLE"),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute(
+    "href",
+    `https://github.com/YoannDrx/pressay/releases/download/${tag}/Pressay.dmg.sha256`,
+  );
   await expect(page.getByText(/Apple Silicon · arm64/)).toBeVisible();
-  await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute("href", /Pressay\.dmg\.sha256$/);
+  await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute(
+    "href",
+    /Pressay\.dmg\.sha256$/,
+  );
 });
 
-test("commercial UI fails closed before identity and Stripe are configured", async ({ page }) => {
+test("commercial UI fails closed before identity and Stripe are configured", async ({
+  page,
+}) => {
   test.skip(isRemoteEnvironment, "This is the local fail-closed contract.");
-  await page.goto("/sign-in");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("bientôt disponible");
-  const response = await page.request.post("/api/checkout", { data: { plan: "pro_byok", interval: "annual" } });
+  await page.goto("/sign-in?locale=fr");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "bientôt disponible",
+  );
+  const response = await page.request.post("/api/checkout", {
+    data: { plan: "pro_byok", interval: "annual" },
+  });
   expect(response.status()).toBe(503);
 });
 
-test("legacy sign-in callback remains harmless while identity is disabled", async ({ page }) => {
-  test.skip(isRemoteEnvironment, "This is the local identity-disabled contract.");
-  await page.goto("/sign-in/sso-callback");
+test("legacy sign-in callback remains harmless while identity is disabled", async ({
+  page,
+}) => {
+  test.skip(
+    isRemoteEnvironment,
+    "This is the local identity-disabled contract.",
+  );
+  await page.goto("/sign-in/sso-callback?locale=fr");
   await expect(page).toHaveTitle(/Pressay/);
-  await expect(page.getByRole("heading", { name: "Connexion bientôt disponible." })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Connexion bientôt disponible." }),
+  ).toBeVisible();
 });
 
 test("local sign-up route is available", async ({ page }) => {
-  test.skip(isRemoteEnvironment, "This is the local identity-disabled contract.");
-  await page.goto("/sign-up");
-  await expect(page.getByRole("heading", { name: "Inscription bientôt disponible." })).toBeVisible();
+  test.skip(
+    isRemoteEnvironment,
+    "This is the local identity-disabled contract.",
+  );
+  await page.goto("/sign-up?locale=fr");
+  await expect(
+    page.getByRole("heading", { name: "Connexion bientôt disponible." }),
+  ).toBeVisible();
 });
 
-test("self-hosted identity endpoints fail closed without server secrets", async ({ request }) => {
-  test.skip(isRemoteEnvironment, "This is the local identity-disabled contract.");
+test("self-hosted identity endpoints fail closed without server secrets", async ({
+  request,
+}) => {
+  test.skip(
+    isRemoteEnvironment,
+    "This is the local identity-disabled contract.",
+  );
   const session = await request.get("/api/auth/get-session");
-  const authorizationMetadata = await request.get("/.well-known/oauth-authorization-server");
+  const authorizationMetadata = await request.get(
+    "/.well-known/oauth-authorization-server",
+  );
   const stepUp = await request.post("/api/account/step-up", {
-    data: { code: "123456", method: "totp" }
+    headers: {
+      origin: new URL(
+        process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:31971",
+      ).origin,
+    },
+    data: { code: "123456", method: "totp" },
   });
 
   expect(session.status()).toBe(503);
@@ -281,53 +396,121 @@ test("self-hosted identity endpoints fail closed without server secrets", async 
   expect(stepUp.status()).toBe(409);
 });
 
-test("a valid referral route signs a private cookie and preserves it on a transient attribution failure", async ({ page }) => {
-  test.skip(isRemoteEnvironment, "This test intentionally simulates an unavailable API.");
+test("a valid referral route signs a private cookie and preserves it on a transient attribution failure", async ({
+  page,
+}) => {
+  test.skip(
+    isRemoteEnvironment,
+    "This test intentionally simulates an unavailable API.",
+  );
   await page.goto("/r/PABCDEF1234567");
   await expect(page).toHaveURL(/\/(?:fr|en)\?ref=PABCDEF1234567$/);
-  const cookie = (await page.context().cookies()).find((candidate) => candidate.name === "pressay_referral");
+  const cookie = (await page.context().cookies()).find(
+    (candidate) => candidate.name === "pressay_referral",
+  );
   expect(cookie?.httpOnly).toBe(true);
   expect(cookie?.sameSite).toBe("Lax");
   await page.context().clearCookies({ name: "pressay_referral" });
-  await page.context().addCookies([{
-    name: "pressay_referral",
-    value: cookie!.value,
-    url: "http://localhost:31971",
-    httpOnly: true,
-    secure: false,
-    sameSite: "Lax"
-  }]);
+  await page.context().addCookies([
+    {
+      name: "pressay_referral",
+      value: cookie!.value,
+      url: "http://localhost:31971",
+      httpOnly: true,
+      secure: false,
+      sameSite: "Lax",
+    },
+  ]);
 
-  const attributionStatus = await page.evaluate(async () => (await fetch("/api/referral/attribute", { method: "POST" })).status);
+  const attributionStatus = await page.evaluate(
+    async () =>
+      (await fetch("/api/referral/attribute", { method: "POST" })).status,
+  );
   expect(attributionStatus).toBe(503);
-  expect((await page.context().cookies()).some((candidate) => candidate.name === "pressay_referral")).toBe(true);
+  expect(
+    (await page.context().cookies()).some(
+      (candidate) => candidate.name === "pressay_referral",
+    ),
+  ).toBe(true);
 });
 
-test("an invalid referral route does not persist a cookie", async ({ page }) => {
+test("an invalid referral route does not persist a cookie", async ({
+  page,
+}) => {
   await page.goto("/r/INVALID-CODE");
   await expect(page).toHaveURL(/\/fr$/);
-  expect((await page.context().cookies()).some((candidate) => candidate.name === "pressay_referral")).toBe(false);
+  expect(
+    (await page.context().cookies()).some(
+      (candidate) => candidate.name === "pressay_referral",
+    ),
+  ).toBe(false);
 });
 
-test("remote staging exposes Better Auth and protects account step-up", async ({ page, request }) => {
-  test.skip(!isRemoteEnvironment, "This contract requires a configured staging deployment.");
+test("remote staging exposes Better Auth and protects account step-up", async ({
+  page,
+  request,
+}) => {
+  test.skip(
+    !isRemoteEnvironment,
+    "This contract requires a configured staging deployment.",
+  );
 
   const session = await request.get("/api/auth/get-session");
-  const authorizationMetadata = await request.get("/.well-known/oauth-authorization-server");
+  const authorizationMetadata = await request.get(
+    "/.well-known/oauth-authorization-server",
+  );
   const stepUp = await request.post("/api/account/step-up", {
-    data: { code: "123456", method: "totp" }
+    headers: {
+      origin: new URL(
+        process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:31971",
+      ).origin,
+    },
+    data: { code: "123456", method: "totp" },
   });
 
   expect(session.status()).toBe(200);
   expect(await session.json()).toBeNull();
   expect(authorizationMetadata.status()).toBe(200);
-  expect((await authorizationMetadata.json()).issuer).toBe(new URL(process.env.PLAYWRIGHT_BASE_URL!).origin);
+  expect((await authorizationMetadata.json()).issuer).toBe(
+    new URL(process.env.PLAYWRIGHT_BASE_URL!).origin,
+  );
   expect(stepUp.status()).toBe(401);
 
-  await page.goto("/sign-in");
+  await page.goto("/sign-in?locale=fr");
   await expect(page.getByRole("button", { name: /Google/i })).toBeVisible();
-  await expect(page.getByText("Aucun code d’accès n’est nécessaire.")).toBeVisible();
+  await expect(
+    page.getByText("Aucun code d’accès n’est nécessaire."),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: /passkey/i })).toBeHidden();
   await page.getByText("Autre méthode", { exact: true }).click();
   await expect(page.getByRole("button", { name: /passkey/i })).toBeVisible();
+});
+
+test("Free and Pro stay centered with equal widths across public pages", async ({
+  page,
+}) => {
+  for (const route of ["/fr", "/en/pricing"]) {
+    await page.goto(route);
+    const grid = page.locator(".pricing-grid");
+    const box = await grid.boundingBox();
+    expect(box).not.toBeNull();
+    const viewport = page.viewportSize()!;
+    expect(
+      Math.abs(box!.x + box!.width / 2 - viewport.width / 2),
+    ).toBeLessThanOrEqual(2);
+    const cards = await grid.locator(".price-card").all();
+    expect(cards).toHaveLength(2);
+    const [free, pro] = await Promise.all(
+      cards.map((card) => card.boundingBox()),
+    );
+    expect(Math.abs(free!.width - pro!.width)).toBeLessThanOrEqual(1);
+    if (viewport.width < 800) expect(pro!.y).toBeGreaterThan(free!.y);
+    else expect(Math.abs(free!.y - pro!.y)).toBeLessThanOrEqual(1);
+    await expect(page.locator("footer .brand-logo")).toBeAttached();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  }
 });

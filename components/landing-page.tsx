@@ -16,131 +16,430 @@ export function LandingPage({ locale }: { locale: Locale }) {
   const remoteRoutesPublished =
     release.byokValidated || release.pressayCloudValidated;
   const localProof = fr
-    ? ["02", "Routes sous contrôle", remoteRoutesPublished
-      ? "Les routes distantes validées restent explicites et ne remplacent jamais le local silencieusement."
-      : "Les routes supplémentaires resteront fermées jusqu’à leur validation de bout en bout."]
-    : ["02", "Routes under control", remoteRoutesPublished
-      ? "Validated remote routes stay explicit and never silently replace Local."
-      : "Additional routes stay closed until their end-to-end validation is complete."];
+    ? [
+        "02",
+        "Routes sous contrôle",
+        remoteRoutesPublished
+          ? "Les routes distantes validées restent explicites et ne remplacent jamais le local silencieusement."
+          : "Les routes supplémentaires resteront fermées jusqu’à leur validation de bout en bout.",
+      ]
+    : [
+        "02",
+        "Routes under control",
+        remoteRoutesPublished
+          ? "Validated remote routes stay explicit and never silently replace Local."
+          : "Additional routes stay closed until their end-to-end validation is complete.",
+      ];
   const productProofs = fr
     ? [
         ["Partout", "Mail, Slack, navigateur, IDE et terminal."],
         ["Local validé", "Trois modèles locaux, hors ligne et sans compte."],
-        ["Réversible", "Cible vérifiée, aperçu éditable, presse-papiers préservé."],
+        [
+          "Réversible",
+          "Cible vérifiée, aperçu éditable, presse-papiers préservé.",
+        ],
       ]
     : [
         ["Everywhere", "Mail, Slack, browsers, IDEs and terminals."],
-        ["Validated Local", "Three local models, offline and without an account."],
-        ["Reversible", "Verified target, editable preview, preserved clipboard."],
+        [
+          "Validated Local",
+          "Three local models, offline and without an account.",
+        ],
+        [
+          "Reversible",
+          "Verified target, editable preview, preserved clipboard.",
+        ],
       ];
   const offers = [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "EUR" },
     ...(release.commercialOfferReady
       ? [
-          { "@type": "Offer", name: "Pro monthly", price: "7.99", priceCurrency: "EUR" },
-          { "@type": "Offer", name: "Pro annual", price: "69", priceCurrency: "EUR" },
+          {
+            "@type": "Offer",
+            name: "Pro monthly",
+            price: "7.99",
+            priceCurrency: "EUR",
+          },
+          {
+            "@type": "Offer",
+            name: "Pro annual",
+            price: "69",
+            priceCurrency: "EUR",
+          },
         ]
       : []),
   ];
-  return <>
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-      "@context": "https://schema.org", "@type": "SoftwareApplication", name: "Pressay",
-      applicationCategory: "ProductivityApplication", operatingSystem: "macOS 14 or later",
-      url: `https://press-say.app/${locale}`, downloadUrl: "https://press-say.app/download/pressay",
-      offers
-    }).replaceAll("<", "\\u003c") }} />
-    <SiteHeader locale={locale} />
-    <main className="immersive-home">
-      <section className="cinema-hero">
-        <div className="hero-noise" aria-hidden="true" />
-        <div className="hero-orb hero-orb-one" aria-hidden="true" />
-        <div className="hero-orb hero-orb-two" aria-hidden="true" />
-        <div className="hero-key key-left" aria-hidden="true"><span>fn</span></div>
-        <div className="hero-key key-right" aria-hidden="true"><span>⌘</span></div>
-        <div className="cinema-copy">
-          <span className="eyebrow">{t.eyebrow}</span>
-          <h1>{fr ? <>Votre Mac,<br /><span>devient vocal.</span></> : <>Your Mac,<br /><span>now speaks.</span></>}</h1>
-          <p>{fr ? "Dictez dans chaque app avec une route locale visible et contrôlable. Les transformations supplémentaires ne sont publiées qu’après validation." : "Dictate in every app with a visible, controlled local route. Additional transformations are published only after validation."}</p>
-          <div className="hero-actions">
-            <a className="button button-primary hero-download" href={`/${locale}/download`}><span>⌘</span>{t.download}</a>
-            <a className="button button-glass" href="#experience">{fr ? "Voir comment ça marche" : "See how it works"}</a>
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: "Pressay",
+            applicationCategory: "ProductivityApplication",
+            operatingSystem: "macOS 14 or later",
+            url: `https://press-say.app/${locale}`,
+            downloadUrl: "https://press-say.app/download/pressay",
+            offers,
+          }).replaceAll("<", "\\u003c"),
+        }}
+      />
+      <SiteHeader locale={locale} />
+      <main className="immersive-home">
+        <section className="cinema-hero">
+          <div className="hero-noise" aria-hidden="true" />
+          <div className="hero-orb hero-orb-one" aria-hidden="true" />
+          <div className="hero-orb hero-orb-two" aria-hidden="true" />
+          <div className="hero-key key-left" aria-hidden="true">
+            <span>fn</span>
           </div>
-          <small>macOS 14+ · Apple Silicon · {fr ? "Free sans compte" : "Free without an account"}</small>
-        </div>
-        <div className="hero-voice" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /><span>PRESS · SAY</span><i /><i /><i /><i /><i /><i /><i /><i /></div>
-        <a className="scroll-invite" href="#experience"><span>{fr ? "Fais défiler pour entrer dans Pressay" : "Scroll to step inside Pressay"}</span><i>↓</i></a>
-      </section>
-
-      <div id="experience"><ImmersiveStory locale={locale} /></div>
-
-      <ProcessingRoutes locale={locale} enabledRoutes={release.processingRoutes} />
-
-      <section className="everywhere-section" id="product">
-        <div className="shell" data-reveal>
-          <span className="mono-label">ONE SHORTCUT / EVERYWHERE</span>
-          <h2>{fr ? <>Là où tu peux écrire,<br /><span>tu peux parler.</span></> : <>Wherever you can type,<br /><span>you can speak.</span></>}</h2>
-        </div>
-        <AppLogoMarquee locale={locale} />
-        <div className="workflow-cards shell">
-          <article data-reveal><span>MAIL</span><p>{fr ? "Rédige une réponse nette sans quitter le fil." : "Draft a crisp reply without leaving the thread."}</p><div className="mini-mail"><i />{fr ? "Bonjour, voici le point demandé…" : "Hi, here is the update you asked for…"}</div></article>
-          <article data-reveal><span>CODE</span><p>{fr ? "Donne plus de contexte à Cursor, Xcode ou ton terminal." : "Give Cursor, Xcode or your terminal richer context."}</p><pre><b>❯</b> {fr ? "Ajoute un test de non-régression…" : "Add a regression test…"}<i /></pre></article>
-          <article data-reveal><span>MESSAGE</span><p>{fr ? "Parle librement. Pressay garde ton ton, pas tes hésitations." : "Speak freely. Pressay keeps your tone, not your hesitation."}</p><div className="mini-message">{fr ? "On valide ça demain matin ?" : "Shall we lock this in tomorrow morning?"}</div></article>
-        </div>
-      </section>
-
-      <section className="modes-planet">
-        <div className="planet-glow" aria-hidden="true" />
-        <div className="shell modes-layout">
-          <div data-reveal><span className="mono-label">MODES / OUTPUT</span><h2>{fr ? "Ta voix ne change pas. Sa forme, oui." : "Your voice stays yours. Its shape adapts."}</h2><p>{t.modesBody}</p><a className="inline-arrow" href={`/${locale}/pricing`}>{fr ? "Découvrir tous les modes" : "Explore every mode"} →</a></div>
-          <div className="mode-orbit" aria-label={fr ? "Modes Pressay" : "Pressay modes"}>
-            <div className="orbit-core"><span>fn</span><small>PRESSAY</small></div>
-            {["Fidèle", "Propre", "Message", "Email", "Prompt", "Commit"].map((mode, index) => <div className={`orbit-mode orbit-${index}`} key={mode}><i>0{index + 1}</i>{mode}</div>)}
+          <div className="hero-key key-right" aria-hidden="true">
+            <span>⌘</span>
           </div>
+          <div className="cinema-copy">
+            <span className="eyebrow">{t.eyebrow}</span>
+            <h1>
+              {fr ? (
+                <>
+                  Là où tu peux écrire, <br />
+                  <span>tu peux parler.</span>
+                </>
+              ) : (
+                <>
+                  Wherever you can type, <br />
+                  <span>you can speak.</span>
+                </>
+              )}
+            </h1>
+            <p>
+              {fr
+                ? "Appuie. Parle. C’est écrit. Dicte dans tes apps, avec un traitement local sur ton Mac."
+                : "Press. Speak. It’s written. Dictate in your apps, with local processing on your Mac."}
+            </p>
+            <div className="hero-actions">
+              <a
+                className="button button-primary hero-download"
+                href={`/${locale}/download`}
+              >
+                <span>⌘</span>
+                {t.download}
+              </a>
+              <a className="button button-glass" href="#experience">
+                {fr ? "Voir comment ça marche" : "See how it works"}
+              </a>
+            </div>
+            <small>
+              macOS 14+ · Apple Silicon ·{" "}
+              {fr ? "Free sans compte" : "Free without an account"}
+            </small>
+          </div>
+          <div className="hero-voice" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <span>PRESS · SAY</span>
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+          </div>
+          <a className="scroll-invite" href="#experience">
+            <span>
+              {fr
+                ? "Fais défiler pour entrer dans Pressay"
+                : "Scroll to step inside Pressay"}
+            </span>
+            <i>↓</i>
+          </a>
+        </section>
+
+        <div id="experience">
+          <ImmersiveStory locale={locale} />
         </div>
-      </section>
 
-      <section className="trust-section">
-        <div className="shell trust-intro" data-reveal><span className="mono-label">LOCAL / VISIBLE / REVERSIBLE</span><h2>{fr ? "L’IA qui montre ses mains." : "AI that shows its hands."}</h2><p>{t.securityBody}</p></div>
-        <div className="trust-grid shell">
-          {(fr ? [
-            ["01", "Local d’abord", "Les modèles de transcription tournent entièrement sur ton Mac. Aucune voix sur nos serveurs."],
-            localProof,
-            ["03", "Réversible", "Aperçu, annulation locale, copie de secours et export restent sous ton contrôle."],
-          ] : [
-            ["01", "Local first", "Transcription models run entirely on your Mac. No voice reaches our servers."],
-            localProof,
-            ["03", "Reversible", "Preview, local undo, safety copy and export remain under your control."],
-          ]).map(([number, title, body]) => <article data-reveal key={number}><span>{number}</span><h3>{title}</h3><p>{body}</p></article>)}
-        </div>
-        <a className="security-link" href={`/${locale}/security`}>{fr ? "Ouvrir le modèle de sécurité" : "Open the security model"}<span>↗</span></a>
-      </section>
+        <ProcessingRoutes
+          locale={locale}
+          enabledRoutes={release.processingRoutes}
+        />
 
-      <section className="proof-ribbon" aria-label={fr ? "Preuves Pressay" : "Pressay proofs"}>{productProofs.map(([title, detail], index) => <div key={title}><span>0{index + 1}</span><strong>{title}</strong><p>{detail}</p></div>)}</section>
+        <section className="everywhere-section" id="product">
+          <div className="shell" data-reveal>
+            <span className="mono-label">ONE SHORTCUT / EVERYWHERE</span>
+            <h2>
+              {fr ? (
+                <>
+                  Là où tu peux écrire, <br />
+                  <span>tu peux parler.</span>
+                </>
+              ) : (
+                <>
+                  Wherever you can type, <br />
+                  <span>you can speak.</span>
+                </>
+              )}
+            </h2>
+          </div>
+          <AppLogoMarquee locale={locale} />
+          <div className="workflow-cards shell">
+            <article data-reveal>
+              <span>MAIL</span>
+              <p>
+                {fr
+                  ? "Rédige une réponse nette sans quitter le fil."
+                  : "Draft a crisp reply without leaving the thread."}
+              </p>
+              <div className="mini-mail">
+                <i />
+                {fr
+                  ? "Bonjour, voici le point demandé…"
+                  : "Hi, here is the update you asked for…"}
+              </div>
+            </article>
+            <article data-reveal>
+              <span>CODE</span>
+              <p>
+                {fr
+                  ? "Donne plus de contexte à Cursor, Xcode ou ton terminal."
+                  : "Give Cursor, Xcode or your terminal richer context."}
+              </p>
+              <pre>
+                <b>❯</b>{" "}
+                {fr
+                  ? "Ajoute un test de non-régression…"
+                  : "Add a regression test…"}
+                <i />
+              </pre>
+            </article>
+            <article data-reveal>
+              <span>MESSAGE</span>
+              <p>
+                {fr
+                  ? "Parle librement. Pressay garde ton ton, pas tes hésitations."
+                  : "Speak freely. Pressay keeps your tone, not your hesitation."}
+              </p>
+              <div className="mini-message">
+                {fr
+                  ? "On valide ça demain matin ?"
+                  : "Shall we lock this in tomorrow morning?"}
+              </div>
+            </article>
+          </div>
+        </section>
 
-      <section className="shell pricing-section immersive-pricing">
-        <div className="section-heading" data-reveal><div><span className="mono-label">FREE / PRO</span><h2>{t.pricingTitle}</h2></div><p>{fr ? "La dictée locale reste illimitée. Pro débloque les workflows avancés, pas ta propre voix." : "Local dictation stays unlimited. Pro unlocks advanced workflows, not your own voice."}</p></div>
-        <Pricing locale={locale} compact />
-        <a className="inline-arrow centered" href={`/${locale}/pricing`}>{fr ? "Comparer les plans en détail" : "Compare plans in detail"} →</a>
-      </section>
+        <section className="modes-planet">
+          <div className="planet-glow" aria-hidden="true" />
+          <div className="shell modes-layout">
+            <div data-reveal>
+              <span className="mono-label">MODES / OUTPUT</span>
+              <h2>
+                {fr
+                  ? "Ta voix ne change pas. Sa forme, oui."
+                  : "Your voice stays yours. Its shape adapts."}
+              </h2>
+              <p>{t.modesBody}</p>
+              <a className="inline-arrow" href={`/${locale}/pricing`}>
+                {fr ? "Découvrir tous les modes" : "Explore every mode"} →
+              </a>
+            </div>
+            <div
+              className="mode-orbit"
+              aria-label={fr ? "Modes Pressay" : "Pressay modes"}
+            >
+              <div className="orbit-core">
+                <span>fn</span>
+                <small>PRESSAY</small>
+              </div>
+              {["Fidèle", "Propre", "Message", "Email", "Prompt", "Commit"].map(
+                (mode, index) => (
+                  <div className={`orbit-mode orbit-${index}`} key={mode}>
+                    <i>0{index + 1}</i>
+                    {mode}
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+        </section>
 
-      <section className="faq shell">
-        <div data-reveal><span className="mono-label">FAQ / NO FINE PRINT</span><h2>{t.faqTitle}</h2></div>
-        {(fr ? [
-          ["Pressay envoie-t-il ma voix sur ses serveurs ?", remoteRoutesPublished ? "Non en local : le modèle reste sur le Mac. Toute route distante publiée exige un choix explicite." : "Non avec la route actuellement publiée : le modèle reste sur le Mac."],
-          ["Pourquoi demander Accessibilité ?", "L’édition Direct l’utilise pour prouver la cible et y insérer le résultat. Companion reste copy-only dans l’App Store."],
-          ["Que devient mon presse-papiers ?", "Après une insertion réussie, Pressay restaure tous les items et formats présents avant la dictée. Une copie concurrente de ta part gagne toujours."],
-          ["Le Cloud est-il obligatoire ?", "Non. La dictée locale fonctionne hors ligne, sans compte et sans quota."],
-        ] : [
-          ["Does Pressay send my voice to its own servers?", remoteRoutesPublished ? "Not in Local mode: the model stays on your Mac. Every published remote route requires an explicit choice." : "Not with the currently published route: the model stays on your Mac."],
-          ["Why does it need Accessibility?", "The Direct edition uses it to prove the target and insert text. The App Store Companion remains copy-only."],
-          ["What happens to my clipboard?", "After a successful insertion, Pressay restores every item and format that existed before dictation. A concurrent copy from you always wins."],
-          ["Is Cloud required?", "No. Local dictation works offline, without an account or quota."],
-        ]).map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}
-      </section>
+        <section className="trust-section">
+          <div className="shell trust-intro" data-reveal>
+            <span className="mono-label">LOCAL / VISIBLE / REVERSIBLE</span>
+            <h2>
+              {fr ? "L’IA qui montre ses mains." : "AI that shows its hands."}
+            </h2>
+            <p>{t.securityBody}</p>
+          </div>
+          <div className="trust-grid shell">
+            {(fr
+              ? [
+                  [
+                    "01",
+                    "Local d’abord",
+                    "Les modèles de transcription tournent entièrement sur ton Mac. Aucune voix sur nos serveurs.",
+                  ],
+                  localProof,
+                  [
+                    "03",
+                    "Réversible",
+                    "Aperçu, annulation locale, copie de secours et export restent sous ton contrôle.",
+                  ],
+                ]
+              : [
+                  [
+                    "01",
+                    "Local first",
+                    "Transcription models run entirely on your Mac. No voice reaches our servers.",
+                  ],
+                  localProof,
+                  [
+                    "03",
+                    "Reversible",
+                    "Preview, local undo, safety copy and export remain under your control.",
+                  ],
+                ]
+            ).map(([number, title, body]) => (
+              <article data-reveal key={number}>
+                <span>{number}</span>
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
+          </div>
+          <a className="security-link" href={`/${locale}/security`}>
+            {fr ? "Ouvrir le modèle de sécurité" : "Open the security model"}
+            <span>↗</span>
+          </a>
+        </section>
 
-      <section className="final-cta immersive-cta"><div className="cta-orb" aria-hidden="true" /><div data-reveal><span className="eyebrow">PRESS / SAY</span><h2>{fr ? <>Parlez.<br />Le clavier suit.</> : <>Speak.<br />The keyboard follows.</>}</h2><p>{fr ? "Votre voix. Votre cible. Votre contrôle." : "Your voice. Your target. Your control."}</p><a className="button button-light" href={`/${locale}/download`}>{t.download}</a></div></section>
-    </main>
-    <SiteFooter locale={locale} />
-    <LandingEffects />
-  </>;
+        <section
+          className="proof-ribbon"
+          aria-label={fr ? "Preuves Pressay" : "Pressay proofs"}
+        >
+          {productProofs.map(([title, detail], index) => (
+            <div key={title}>
+              <span>0{index + 1}</span>
+              <strong>{title}</strong>
+              <p>{detail}</p>
+            </div>
+          ))}
+        </section>
+
+        <section className="shell pricing-section immersive-pricing">
+          <div className="section-heading" data-reveal>
+            <div>
+              <span className="mono-label">FREE / PRO</span>
+              <h2>{t.pricingTitle}</h2>
+            </div>
+            <p>
+              {fr
+                ? "La dictée locale reste illimitée. Pro débloque les workflows avancés, pas ta propre voix."
+                : "Local dictation stays unlimited. Pro unlocks advanced workflows, not your own voice."}
+            </p>
+          </div>
+          <Pricing locale={locale} compact />
+          <a className="inline-arrow centered" href={`/${locale}/pricing`}>
+            {fr ? "Comparer les plans en détail" : "Compare plans in detail"} →
+          </a>
+        </section>
+
+        <section className="faq shell">
+          <div data-reveal>
+            <span className="mono-label">FAQ / NO FINE PRINT</span>
+            <h2>{t.faqTitle}</h2>
+          </div>
+          {(fr
+            ? [
+                [
+                  "Pressay envoie-t-il ma voix sur ses serveurs ?",
+                  remoteRoutesPublished
+                    ? "Non en local : le modèle reste sur le Mac. Toute route distante publiée exige un choix explicite."
+                    : "Non avec la route actuellement publiée : le modèle reste sur le Mac.",
+                ],
+                [
+                  "Pourquoi demander Accessibilité ?",
+                  "L’édition Direct l’utilise pour prouver la cible et y insérer le résultat. Companion reste copy-only dans l’App Store.",
+                ],
+                [
+                  "Que devient mon presse-papiers ?",
+                  "Après une insertion réussie, Pressay restaure tous les items et formats présents avant la dictée. Une copie concurrente de ta part gagne toujours.",
+                ],
+                [
+                  "Le Cloud est-il obligatoire ?",
+                  "Non. La dictée locale fonctionne hors ligne, sans compte et sans quota.",
+                ],
+              ]
+            : [
+                [
+                  "Does Pressay send my voice to its own servers?",
+                  remoteRoutesPublished
+                    ? "Not in Local mode: the model stays on your Mac. Every published remote route requires an explicit choice."
+                    : "Not with the currently published route: the model stays on your Mac.",
+                ],
+                [
+                  "Why does it need Accessibility?",
+                  "The Direct edition uses it to prove the target and insert text. The App Store Companion remains copy-only.",
+                ],
+                [
+                  "What happens to my clipboard?",
+                  "After a successful insertion, Pressay restores every item and format that existed before dictation. A concurrent copy from you always wins.",
+                ],
+                [
+                  "Is Cloud required?",
+                  "No. Local dictation works offline, without an account or quota.",
+                ],
+              ]
+          ).map(([question, answer]) => (
+            <details key={question}>
+              <summary>{question}</summary>
+              <p>{answer}</p>
+            </details>
+          ))}
+        </section>
+
+        <section className="final-cta immersive-cta">
+          <div className="cta-orb" aria-hidden="true" />
+          <div data-reveal>
+            <span className="eyebrow">PRESS / SAY</span>
+            <h2>
+              {fr ? (
+                <>
+                  Parlez.
+                  <br />
+                  Le clavier suit.
+                </>
+              ) : (
+                <>
+                  Speak.
+                  <br />
+                  The keyboard follows.
+                </>
+              )}
+            </h2>
+            <p>
+              {fr
+                ? "Votre voix. Votre cible. Votre contrôle."
+                : "Your voice. Your target. Your control."}
+            </p>
+            <a className="button button-light" href={`/${locale}/download`}>
+              {t.download}
+            </a>
+          </div>
+        </section>
+      </main>
+      <SiteFooter locale={locale} />
+      <LandingEffects />
+    </>
+  );
 }
