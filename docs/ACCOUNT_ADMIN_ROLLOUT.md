@@ -1,7 +1,7 @@
 # Compte et administration — livraison du 16 septembre 2026
 
 Base web : `c5fdaa6`. Le backend compagnon est la branche
-`codex/account-admin-referrals` de `pressay-cloud`, avec la migration 0017.
+`codex/account-admin-referrals` de `pressay-cloud`, avec les migrations 0017 et 0018.
 Les modifications n'ouvrent ni les ventes ni le programme de parrainage.
 
 ## Parcours livrés
@@ -72,8 +72,10 @@ L'indicateur Next.js visible sur certaines captures appartient au serveur local.
 
 ## Limites à valider avant activation
 
-- Stripe Codex était déconnecté pendant l'implémentation. Aucun paiement Sandbox
-  distant n'est déclaré testé ; les tests backend utilisent un double du SDK Stripe.
+- Stripe reconnecté le 16 septembre : paiements test mensuel/annuel, promotions
+  25 %/100 %, webhook répété, crédits, cadeaux et remboursements vérifiés sur le
+  backend staging. Une recette commerciale complète et un contrôle des mutations
+  dans la session administrateur finale restent distincts de ces tests.
 - Les récompenses sont persistantes et traitées par lot quotidien ou bouton admin.
   Les crédits Stripe appliqués ou d'issue incertaine passent en revue manuelle lors
   d'un remboursement, pour éviter de créer une dette client automatiquement.
