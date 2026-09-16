@@ -2,6 +2,7 @@ import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { jwt, twoFactor } from "better-auth/plugins";
+import { APIError } from "better-auth/api";
 import { importPKCS8, SignJWT } from "jose";
 import { Pool } from "pg";
 import {
@@ -9,15 +10,18 @@ import {
   betterAuthIsConfigured,
   betterAuthURL,
   passkeyRelyingPartyID,
-  trustedAuthOrigins
+  trustedAuthOrigins,
 } from "@/lib/auth-env";
 
 const configured = betterAuthIsConfigured();
 const appURL = betterAuthURL();
-const fallbackDatabaseURL = "postgresql://pressay:pressay@127.0.0.1:1/pressay_auth_disabled";
+const fallbackDatabaseURL =
+  "postgresql://pressay:pressay@127.0.0.1:1/pressay_auth_disabled";
 const fallbackSecret = "pressay-disabled-auth-secret-that-is-never-served";
-const macOSClientID = process.env.PRESSAY_MACOS_OAUTH_CLIENT_ID || "w9ckUgrcFp7H7wNV";
-const apiResource = process.env.PRESSAY_OAUTH_RESOURCE || "https://api.press-say.app";
+const macOSClientID =
+  process.env.PRESSAY_MACOS_OAUTH_CLIENT_ID || "w9ckUgrcFp7H7wNV";
+const apiResource =
+  process.env.PRESSAY_OAUTH_RESOURCE || "https://api.press-say.app";
 
 async function generateAppleClientSecret(): Promise<string> {
   const clientID = process.env.APPLE_CLIENT_ID;
@@ -45,24 +49,29 @@ export const authOptions = {
   basePath: "/api/auth",
   secret: configured ? process.env.BETTER_AUTH_SECRET : fallbackSecret,
   database: new Pool({
-    connectionString: configured ? process.env.DATABASE_URL : fallbackDatabaseURL,
+    connectionString: configured
+      ? process.env.DATABASE_URL
+      : fallbackDatabaseURL,
     max: 5,
     idleTimeoutMillis: 20_000,
-    connectionTimeoutMillis: 5_000
+    connectionTimeoutMillis: 5_000,
   }),
   trustedOrigins: trustedAuthOrigins(),
   socialProviders: {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID || "disabled.apps.googleusercontent.com",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "disabled"
+      clientId:
+        process.env.GOOGLE_CLIENT_ID || "disabled.apps.googleusercontent.com",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "disabled",
     },
-    ...(appleAuthIsConfigured() ? {
-      apple: async () => ({
-        clientId: process.env.APPLE_CLIENT_ID as string,
-        clientSecret: await generateAppleClientSecret(),
-        appBundleIdentifier: process.env.APPLE_APP_BUNDLE_IDENTIFIER
-      })
-    } : {})
+    ...(appleAuthIsConfigured()
+      ? {
+          apple: async () => ({
+            clientId: process.env.APPLE_CLIENT_ID as string,
+            clientSecret: await generateAppleClientSecret(),
+            appBundleIdentifier: process.env.APPLE_APP_BUNDLE_IDENTIFIER,
+          }),
+        }
+      : {}),
   },
   account: {
     modelName: "auth_accounts",
@@ -71,20 +80,35 @@ export const authOptions = {
       enabled: true,
       trustedProviders: ["google", "apple"],
       allowDifferentEmails: false,
-      allowUnlinkingAll: false
-    }
+      allowUnlinkingAll: false,
+    },
   },
-  user: { modelName: "auth_users" },
+  user: {
+    modelName: "auth_users",
+    deleteUser: {
+      enabled: true,
+      beforeDelete: async () => {
+        // The provider also exposes /delete-user. Always enqueue Cloud cleanup first,
+        // including calls made directly to that endpoint.
+        const { pressayAPI } = await import("@/lib/pressay-api");
+        const result = await pressayAPI("me", { method: "DELETE" });
+        if (!result.ok && result.status !== 404)
+          throw new APIError("SERVICE_UNAVAILABLE", {
+            message: "Account cleanup is temporarily unavailable",
+          });
+      },
+    },
+  },
   session: {
     modelName: "auth_sessions",
     expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,
     freshAge: 60 * 10,
-    cookieCache: { enabled: false }
+    cookieCache: { enabled: false },
   },
   verification: {
     modelName: "auth_verifications",
-    storeIdentifier: "hashed"
+    storeIdentifier: "hashed",
   },
   rateLimit: {
     enabled: true,
@@ -96,8 +120,8 @@ export const authOptions = {
       "/sign-in/social": { window: 60, max: 10 },
       "/sign-in/passkey": { window: 60, max: 10 },
       "/two-factor/verify-totp": { window: 60, max: 10 },
-      "/two-factor/verify-backup-code": { window: 60, max: 5 }
-    }
+      "/two-factor/verify-backup-code": { window: 60, max: 5 },
+    },
   },
   advanced: {
     cookiePrefix: "pressay_auth",
@@ -110,13 +134,13 @@ export const authOptions = {
         attributes: {
           httpOnly: true,
           sameSite: "none",
-          secure: true
-        }
-      }
+          secure: true,
+        },
+      },
     },
     ipAddress: {
-      ipAddressHeaders: ["x-vercel-forwarded-for", "x-forwarded-for"]
-    }
+      ipAddressHeaders: ["x-vercel-forwarded-for", "x-forwarded-for"],
+    },
   },
   disabledPaths: ["/token"],
   plugins: [
@@ -128,11 +152,11 @@ export const authOptions = {
       accountLockout: {
         enabled: true,
         maxFailedAttempts: 8,
-        durationSeconds: 15 * 60
+        durationSeconds: 15 * 60,
       },
       schema: {
-        twoFactor: { modelName: "auth_two_factors" }
-      }
+        twoFactor: { modelName: "auth_two_factors" },
+      },
     }),
     passkey({
       rpID: passkeyRelyingPartyID(),
@@ -140,39 +164,43 @@ export const authOptions = {
       origin: trustedAuthOrigins(),
       authenticatorSelection: {
         residentKey: "preferred",
-        userVerification: "required"
+        userVerification: "required",
       },
       schema: {
-        passkey: { modelName: "auth_passkeys" }
-      }
+        passkey: { modelName: "auth_passkeys" },
+      },
     }),
     jwt({
       disableSettingJwtHeader: true,
       jwt: {
         issuer: appURL,
         audience: apiResource,
-        expirationTime: "15m"
+        expirationTime: "15m",
       },
       jwks: {
         rotationInterval: 60 * 60 * 24 * 30,
         gracePeriod: 60 * 60 * 24 * 45,
-        keyPairConfig: { alg: "EdDSA", crv: "Ed25519" }
+        keyPairConfig: { alg: "EdDSA", crv: "Ed25519" },
       },
       schema: {
-        jwks: { modelName: "auth_jwks" }
-      }
+        jwks: { modelName: "auth_jwks" },
+      },
     }),
     oauthProvider({
       loginPage: "/sign-in",
       consentPage: "/oauth/consent",
       scopes: ["openid", "profile", "email", "offline_access"],
-      resources: configured ? [{
-        identifier: apiResource,
-        name: "Pressay API",
-        accessTokenTtl: 15 * 60,
-        refreshTokenTtl: 30 * 24 * 60 * 60,
-        allowedScopes: ["openid", "profile", "email", "offline_access"]
-      }] : [],
+      resources: configured
+        ? [
+            {
+              identifier: apiResource,
+              name: "Pressay API",
+              accessTokenTtl: 15 * 60,
+              refreshTokenTtl: 30 * 24 * 60 * 60,
+              allowedScopes: ["openid", "profile", "email", "offline_access"],
+            },
+          ]
+        : [],
       resourceSeedMode: "insertOnly",
       cachedResources: new Set([apiResource]),
       enforcePerClientResources: true,
@@ -184,12 +212,12 @@ export const authOptions = {
       allowUnauthenticatedClientRegistration: false,
       silenceWarnings: {
         oauthAuthServerConfig: true,
-        openidConfig: true
+        openidConfig: true,
       },
       customAccessTokenClaims: ({ user }) => ({
         email: user?.email,
         email_verified: user?.emailVerified === true,
-        name: user?.name
+        name: user?.name,
       }),
       schema: {
         oauthClient: { modelName: "auth_oauth_clients" },
@@ -198,10 +226,10 @@ export const authOptions = {
         oauthRefreshToken: { modelName: "auth_oauth_refresh_tokens" },
         oauthAccessToken: { modelName: "auth_oauth_access_tokens" },
         oauthConsent: { modelName: "auth_oauth_consents" },
-        oauthClientAssertion: { modelName: "auth_oauth_client_assertions" }
-      }
-    })
-  ]
+        oauthClientAssertion: { modelName: "auth_oauth_client_assertions" },
+      },
+    }),
+  ],
 } satisfies BetterAuthOptions;
 
 export const auth = betterAuth(authOptions);

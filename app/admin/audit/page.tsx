@@ -1,5 +1,49 @@
 import { AdminHeading } from "@/components/admin-heading";
-import { pressayJSON } from "@/lib/pressay-api";
-type Entry = { id: number; actor_role: string; permission: string; action: string; target_type: string; target_id: string; reason: string; request_id: string; result: string; created_at: string };
-export default async function AdminAuditPage() { const { data } = await pressayJSON<{ entries: Entry[] }>("admin/audit-log"); return <><AdminHeading eyebrow="APPEND ONLY" title="Journal d’audit" detail="Acteur, permission, cible, motif, résultat et request ID. Les états sont expurgés." /><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Action</th><th>Acteur</th><th>Cible</th><th>Motif</th><th>Request ID</th><th>Date</th></tr></thead><tbody>{data?.entries.map((entry) => <tr key={entry.id}><td><strong>{entry.action}</strong><small>{entry.permission} · {entry.result}</small></td><td>{entry.actor_role}</td><td>{entry.target_type} · <code>{entry.target_id?.slice(0, 12)}</code></td><td>{entry.reason}</td><td><code>{entry.request_id.slice(0, 12)}</code></td><td>{date(entry.created_at)}</td></tr>)}</tbody></table></div></>; }
-function date(value: string) { return new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)); }
+import { adminData, AdminTable, adminDate } from "@/components/admin-data";
+type Entry = {
+  id: number;
+  actor_id: string | null;
+  action: string;
+  target_id: string;
+  reason: string;
+  request_id: string;
+  result: string;
+  created_at: string;
+};
+export default async function Page() {
+  const { data, error } = await adminData<{ entries: Entry[] }>(
+    "admin/audit-log",
+  );
+  return (
+    <>
+      <AdminHeading
+        eyebrow="TRAÇABILITÉ"
+        title="Journal d’audit"
+        detail="Demandes et résultats des opérations administratives. Aucun contenu de dictée ni secret."
+      />
+      {error}
+      {data ? (
+        <AdminTable
+          headers={[
+            "Action",
+            "Auteur",
+            "Cible",
+            "Motif",
+            "Résultat",
+            "Référence",
+            "Date",
+          ]}
+          rows={data.entries.map((e) => [
+            e.action,
+            e.actor_id?.slice(0, 8) ?? "Compte supprimé",
+            e.target_id,
+            e.reason,
+            e.result,
+            e.request_id.slice(0, 12),
+            adminDate(e.created_at),
+          ])}
+        />
+      ) : null}
+    </>
+  );
+}

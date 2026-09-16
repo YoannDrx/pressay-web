@@ -9,14 +9,14 @@ export function Pricing({ locale, compact = false }: { locale: Locale; compact?:
     {plans.map((plan) => {
       const features = plan.code === "pro" && !release.proScopeValidated
         ? locale === "fr"
-          ? ["Périmètre final publié après validation", "Activation après confirmation de paiement", "Free local reste inchangé"]
-          : ["Final scope published after validation", "Activation follows payment confirmation", "Local Free remains unchanged"]
+          ? ["Fonctionnalités détaillées avant ouverture", "Abonnement mensuel ou annuel", "Free reste disponible"]
+          : ["Features detailed before launch", "Monthly or annual subscription", "Free remains available"]
         : locale === "fr" ? plan.featuresFr : plan.featuresEn;
       return <article className={`price-card ${plan.code === "pro" ? "featured" : ""}`} key={plan.code}>
       <div>
         <span className="mono-label">{plan.code.replaceAll("_", " / ")}</span>
         <h3>{plan.name}</h3>
-        <strong>{plan.monthly}</strong>
+        <strong>{locale === "en" ? plan.code === "pro" ? "€7.99 / month" : "€0" : plan.monthly}</strong>
         <p>{locale === "fr" ? plan.detailFr : plan.detailEn}</p>
       </div>
       <ul>
@@ -29,7 +29,7 @@ export function Pricing({ locale, compact = false }: { locale: Locale; compact?:
         <CommercialCheckout locale={locale} />}
     </article>;
     })}
-  </div><p className="pricing-legal-note">{locale === "fr" ? "Prix, taxes applicables et renouvellement affichés avant commande. Les offres payantes ouvriront après validation fiscale et des obligations de vente à distance." : "Final price, applicable taxes and renewal are shown before purchase. Paid plans will open after tax and distance-selling requirements are validated."}</p>{release.commercialOfferReady ? <CheckoutScript /> : null}</>;
+  </div><p className="pricing-legal-note">{locale === "fr" ? "Prix, taxes applicables et renouvellement affichés avant commande." : "Final price, applicable taxes and renewal are shown before purchase."}</p>{release.commercialOfferReady ? <CheckoutScript /> : null}</>;
 }
 
 function CommercialCheckout({ locale }: { locale: Locale }) {
@@ -65,7 +65,7 @@ function CheckoutScript() {
             body: JSON.stringify({ plan: "pro_byok", interval: button.dataset.checkoutInterval, acceptedTerms: true, immediatePerformanceConsent: true, termsVersion: "2026-08-10" })
           });
           if (response.status === 401) {
-            window.location.assign("/sign-in?redirect_url=" + encodeURIComponent(window.location.href));
+            window.location.assign("/sign-in?redirect_url=" + encodeURIComponent(window.location.pathname + window.location.search));
             return;
           }
           const payload = await response.json();
@@ -73,7 +73,7 @@ function CheckoutScript() {
             window.location.assign(payload.url);
             return;
           }
-          error.textContent = payload.error || "Checkout unavailable";
+          error.textContent = typeof payload.error === "string" ? payload.error : payload.error?.message || (surface.dataset.locale === "fr" ? "Paiement temporairement indisponible" : "Checkout temporarily unavailable");
         } catch {
           error.textContent = surface.dataset.locale === "fr" ? "Paiement temporairement indisponible" : "Checkout temporarily unavailable";
         }

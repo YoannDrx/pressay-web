@@ -1,5 +1,8 @@
 # pressay-web
 
+La livraison compte/administration, sa recette et son déploiement sont décrits dans
+[le guide compte et administration](docs/ACCOUNT_ADMIN_ROLLOUT.md).
+
 Site public et espace compte de Pressay, construit avec Next.js 16. Le domaine
 canonique est `https://press-say.app`; l’API Hono reste séparée sur
 `https://api.press-say.app/v1`.

@@ -5,12 +5,17 @@ import { authClient } from "@/lib/auth-client";
 
 export function BetterAuthSignIn({
   callbackURL,
-  appleEnabled
+  locale = "fr",
+  appleEnabled,
 }: {
   callbackURL: string;
+  locale?: "fr" | "en";
   appleEnabled: boolean;
 }) {
-  const [pending, setPending] = useState<"google" | "apple" | "passkey" | null>(null);
+  const fr = locale === "fr";
+  const [pending, setPending] = useState<"google" | "apple" | "passkey" | null>(
+    null,
+  );
   const [message, setMessage] = useState("");
 
   async function signInWithSocial(provider: "google" | "apple") {
@@ -20,12 +25,20 @@ export function BetterAuthSignIn({
       const result = await authClient.signIn.social({
         provider,
         callbackURL,
-        errorCallbackURL: `/sign-in?error=oauth&redirect_url=${encodeURIComponent(callbackURL)}`
+        errorCallbackURL: `/sign-in?error=oauth&redirect_url=${encodeURIComponent(callbackURL)}`,
       });
       if (!result.error) return;
-      setMessage(`La connexion ${provider === "apple" ? "Apple" : "Google"} n’a pas abouti. Réessaie dans quelques instants.`);
+      setMessage(
+        fr
+          ? "La connexion n’a pas abouti. Réessaie."
+          : "Sign-in failed. Please try again.",
+      );
     } catch {
-      setMessage(`Impossible d’ouvrir ${provider === "apple" ? "Apple" : "Google"}. Vérifie ta connexion puis réessaie.`);
+      setMessage(
+        fr
+          ? "Vérifie ta connexion puis réessaie."
+          : "Check your connection and try again.",
+      );
     }
     setPending(null);
   }
@@ -34,10 +47,14 @@ export function BetterAuthSignIn({
     setPending("passkey");
     setMessage("");
     const result = await authClient.signIn.passkey({
-      fetchOptions: { throw: false }
+      fetchOptions: { throw: false },
     });
     if (result.error) {
-      setMessage("Aucune clé d’accès valide n’a été présentée.");
+      setMessage(
+        fr
+          ? "Aucune clé d’accès valide n’a été présentée."
+          : "No valid passkey was provided.",
+      );
       setPending(null);
       return;
     }
@@ -46,28 +63,76 @@ export function BetterAuthSignIn({
 
   return (
     <div className="auth-placeholder auth-provider-card">
-      <span className="mono-label">COMPTE PRESSAY</span>
-      <h1>Connexion.</h1>
-      <p>Google ou Apple crée ou retrouve ton compte. Aucun code d’accès n’est nécessaire.</p>
+      <span className="mono-label">
+        {fr ? "COMPTE PRESSAY" : "PRESSAY ACCOUNT"}
+      </span>
+      <h1>{fr ? "Connexion." : "Sign in."}</h1>
+      <p>
+        {fr
+          ? "Google ou Apple crée ou retrouve ton compte. Aucun code d’accès n’est nécessaire."
+          : "Sign in with Google or Apple. No invitation code is required."}
+      </p>
       <div className="auth-provider-actions">
-        <button className="button button-primary" disabled={pending !== null} onClick={() => signInWithSocial("google")}>
-          {pending === "google" ? "Connexion…" : "Continuer avec Google"}
+        <button
+          className="button button-primary"
+          disabled={pending !== null}
+          onClick={() => signInWithSocial("google")}
+        >
+          {pending === "google"
+            ? fr
+              ? "Connexion…"
+              : "Signing in…"
+            : fr
+              ? "Continuer avec Google"
+              : "Continue with Google"}
         </button>
         {appleEnabled ? (
-          <button className="button auth-apple-button" disabled={pending !== null} onClick={() => signInWithSocial("apple")}>
-            {pending === "apple" ? "Connexion…" : "Continuer avec Apple"}
+          <button
+            className="button auth-apple-button"
+            disabled={pending !== null}
+            onClick={() => signInWithSocial("apple")}
+          >
+            {pending === "apple"
+              ? fr
+                ? "Connexion…"
+                : "Signing in…"
+              : fr
+                ? "Continuer avec Apple"
+                : "Continue with Apple"}
           </button>
         ) : null}
         <details className="auth-alternative">
-          <summary>Autre méthode</summary>
-          <p>Uniquement si tu as déjà configuré une passkey Pressay avec Touch ID sur cet appareil.</p>
-          <button className="button" disabled={pending !== null} onClick={signInWithPasskey}>
-            {pending === "passkey" ? "Vérification…" : "Se connecter avec une passkey"}
+          <summary>{fr ? "Autre méthode" : "Another method"}</summary>
+          <p>
+            {fr
+              ? "Uniquement si tu as déjà configuré une passkey Pressay avec Touch ID sur cet appareil."
+              : "Use this if you already set up a Pressay passkey on this device."}
+          </p>
+          <button
+            className="button"
+            disabled={pending !== null}
+            onClick={signInWithPasskey}
+          >
+            {pending === "passkey"
+              ? fr
+                ? "Vérification…"
+                : "Verifying…"
+              : fr
+                ? "Se connecter avec une passkey"
+                : "Sign in with a passkey"}
           </button>
         </details>
       </div>
-      {message ? <output className="auth-message" role="alert">{message}</output> : null}
-      <small>Session sécurisée, cookies strictement nécessaires uniquement.</small>
+      {message ? (
+        <output className="auth-message" role="alert">
+          {message}
+        </output>
+      ) : null}
+      <small>
+        {fr
+          ? "Session sécurisée, cookies strictement nécessaires uniquement."
+          : "Secure session. Strictly necessary cookies only."}
+      </small>
     </div>
   );
 }

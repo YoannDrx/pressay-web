@@ -14,26 +14,34 @@ export function commercialIsConfigured(): boolean {
 }
 
 export function commercialCheckoutIsEnabled(): boolean {
-  return commercialIsConfigured() && publicReleaseCapabilities().commercialOfferReady;
+  return (
+    commercialIsConfigured() && publicReleaseCapabilities().commercialOfferReady
+  );
 }
 
 export async function pressayAPI(
   path: string,
   init: RequestInit = {},
-  options: { bootstrap?: boolean } = {}
+  options: { bootstrap?: boolean } = {},
 ): Promise<Response> {
   if (!commercialIsConfigured()) {
-    return Response.json({ error: "commercial_beta_not_configured" }, { status: 503 });
+    return Response.json(
+      { error: "commercial_beta_not_configured" },
+      { status: 503 },
+    );
   }
   const identity = await getWebIdentity();
-  if (!identity) return Response.json({ error: "authentication_required" }, { status: 401 });
-  const token = identity.clerkToken ?? await createInternalAPIToken(identity);
-  if (!token) return Response.json({ error: "api_token_unavailable" }, { status: 401 });
+  if (!identity)
+    return Response.json({ error: "authentication_required" }, { status: 401 });
+  const token = identity.clerkToken ?? (await createInternalAPIToken(identity));
+  if (!token)
+    return Response.json({ error: "api_token_unavailable" }, { status: 401 });
   const base = normalizedAPIURL();
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${token}`);
   headers.set("X-Request-ID", randomUUID());
-  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  if (init.body && !headers.has("Content-Type"))
+    headers.set("Content-Type", "application/json");
   if (options.bootstrap) {
     const bootstrap = await bootstrapWebAccount(base, headers);
     if (!bootstrap.ok && bootstrap.status !== 409) return bootstrap;
@@ -41,11 +49,14 @@ export async function pressayAPI(
   return fetch(`${base}/${path.replace(/^\/+/, "")}`, {
     ...init,
     headers,
-    cache: "no-store"
+    cache: "no-store",
+    signal: init.signal ?? AbortSignal.timeout(8000),
   });
 }
 
-async function createInternalAPIToken(identity: WebIdentity): Promise<string | null> {
+async function createInternalAPIToken(
+  identity: WebIdentity,
+): Promise<string | null> {
   // Better Auth already owns the asymmetric signing keys advertised by the
   // public JWKS endpoint and trusted by the macOS/API OAuth path. Reuse that
   // trust chain for the server-side account proxy instead of depending on a
@@ -61,9 +72,10 @@ async function createInternalAPIToken(identity: WebIdentity): Promise<string | n
             name: identity.name,
             sid: identity.sessionID,
             pressay_step_up_at: identity.stepUpAt,
-            pressay_step_up_method: identity.stepUpMethod
-          }
-        }
+            pressay_step_up_method: identity.stepUpMethod,
+            token_use: "pressay_web_proxy",
+          },
+        },
       });
       return signed.token;
     } catch {
@@ -80,11 +92,14 @@ async function createInternalAPIToken(identity: WebIdentity): Promise<string | n
     sid: identity.sessionID,
     pressay_step_up_at: identity.stepUpAt,
     pressay_step_up_method: identity.stepUpMethod,
-    token_use: "pressay_web_proxy"
+    token_use: "pressay_web_proxy",
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject(identity.subject)
-    .setIssuer(process.env.PRESSAY_INTERNAL_JWT_ISSUER || "https://press-say.app/internal")
+    .setIssuer(
+      process.env.PRESSAY_INTERNAL_JWT_ISSUER ||
+        "https://press-say.app/internal",
+    )
     .setAudience("pressay-api")
     .setJti(randomUUID())
     .setIssuedAt()
@@ -97,9 +112,11 @@ function validInternalJWTSecret(): string | null {
   return secret && secret.length >= 32 ? secret : null;
 }
 
-export async function pressayJSON<T>(path: string): Promise<{ response: Response; data: T | null }> {
+export async function pressayJSON<T>(
+  path: string,
+): Promise<{ response: Response; data: T | null }> {
   const response = await pressayAPI(path);
-  const parsed = await response.json().catch(() => null) as T | null;
+  const parsed = (await response.json().catch(() => null)) as T | null;
   return { response, data: response.ok ? parsed : null };
 }
 

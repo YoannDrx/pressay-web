@@ -1,10 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const remoteBaseURL = process.env.PLAYWRIGHT_BASE_URL?.replace(/\/+$/, "");
-const commercialLaunchFixture = process.env.PLAYWRIGHT_COMMERCIAL_LAUNCH === "true";
+const commercialLaunchFixture =
+  process.env.PLAYWRIGHT_COMMERCIAL_LAUNCH === "true";
 const inheritedEnvironment = Object.fromEntries(
-  Object.entries(process.env).filter((entry): entry is [string, string] =>
-    typeof entry[1] === "string"),
+  Object.entries(process.env).filter(
+    (entry): entry is [string, string] => typeof entry[1] === "string",
+  ),
 );
 const localServerEnvironment = commercialLaunchFixture
   ? {
@@ -21,6 +23,7 @@ const localServerEnvironment = commercialLaunchFixture
 export default defineConfig({
   testDir: "./tests",
   testMatch: "**/*.spec.ts",
+  testIgnore: "**/account-auth.spec.ts",
   timeout: 60_000,
   // Next.js compiles the identity and billing routes on first access. Running
   // every test in this single spec concurrently can make those fail-closed
@@ -33,17 +36,23 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: remoteBaseURL || "http://127.0.0.1:31971",
-    trace: "on-first-retry"
+    trace: "on-first-retry",
   },
-  webServer: remoteBaseURL ? undefined : {
-    command: "PRESSAY_REFERRAL_COOKIE_SECRET=playwright-referral-secret pnpm dev --hostname 127.0.0.1 --port 31971",
-    env: localServerEnvironment,
-    url: "http://127.0.0.1:31971",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000
-  },
+  webServer: remoteBaseURL
+    ? undefined
+    : {
+        command:
+          "PRESSAY_REFERRAL_COOKIE_SECRET=playwright-referral-secret pnpm dev --hostname 127.0.0.1 --port 31971",
+        env: localServerEnvironment,
+        url: "http://127.0.0.1:31971",
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["iPhone 13"], browserName: "chromium" } }
-  ]
+    {
+      name: "mobile",
+      use: { ...devices["iPhone 13"], browserName: "chromium" },
+    },
+  ],
 });

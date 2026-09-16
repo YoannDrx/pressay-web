@@ -1,27 +1,124 @@
-import { notFound } from "next/navigation";
+import Link from "next/link";
 import { AdminHeading } from "@/components/admin-heading";
 import { AdminActionForm } from "@/components/admin-action-form";
-import { pressayJSON } from "@/lib/pressay-api";
-
-type Detail = { account: Record<string, unknown>; devices: Array<Record<string, unknown>>; grants: Array<Record<string, unknown>>; billing: Record<string, unknown> | null; transactions: Array<Record<string, unknown>>; referrals: Array<Record<string, unknown>>; notes: Array<Record<string, unknown>>; audit: Array<Record<string, unknown>>; unavailableData: string[] };
-export default async function AdminUserPage({ params }: { params: Promise<{ id: string }> }) {
+import { adminData, AdminTable, adminDate } from "@/components/admin-data";
+import type { AccountMe, Devices, Usage } from "@/lib/account-data";
+type Detail = {
+  account: AccountMe;
+  devices: Devices["devices"];
+  usage: Usage;
+  subscriptions: {
+    provider: string;
+    status: string;
+    billing_interval: string;
+    current_period_ends_at: string;
+    apple_environment: string;
+  }[];
+  grants: {
+    id: string;
+    source: string;
+    ends_at: string;
+    revoked_at: string | null;
+  }[];
+  referrals: {
+    id: string;
+    referrer_id: string;
+    referee_id: string;
+    status: string;
+  }[];
+};
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
-  const { response, data } = await pressayJSON<Detail>(`admin/users/${id}`);
-  if (response.status === 404 || !data) notFound();
-  const account = data.account;
-  return <>
-    <AdminHeading eyebrow={`USER / ${id.slice(0, 8)}`} title={String(account.display_name || account.email || "Utilisateur")} detail="Vue de support expurgée : aucune dictée, aucun audio, aucun fichier et aucune clé BYOK." />
-    <section className="admin-kpis admin-kpis-three"><article><span>Plan fournisseur</span><strong>{String(account.subscription_plan || "free")}</strong><small>{String(account.subscription_status || "inconnu")}</small></article><article><span>Appareils actifs</span><strong>{String(account.active_device_count ?? 0)}</strong><small>Maximum calculé par droit effectif</small></article><article><span>Dernier contact</span><strong>{account.last_device_seen_at ? shortDate(String(account.last_device_seen_at)) : "Inconnu"}</strong><small>Absence = non connecté ou sans consentement</small></article></section>
-    <section className="admin-grid-two">
-      <article className="admin-panel"><h2>Appareils</h2><div className="admin-stack">{data.devices.map((device) => <div className="admin-row" key={String(device.id)}><div><strong>{String(device.app_version)}</strong><small>{String(device.architecture)} · {String(device.distribution_channel)} · macOS {String(device.os_major ?? "?")}</small></div><span>{device.revoked_at ? "Révoqué" : shortDate(String(device.last_seen_at))}</span></div>)}</div></article>
-      <article className="admin-panel"><h2>Droits complémentaires</h2><div className="admin-stack">{data.grants.map((grant) => <div className="admin-row" key={String(grant.id)}><div><strong>{String(grant.plan_code)}</strong><small>{String(grant.source)} · {String(grant.reason)}</small></div><span>{grant.revoked_at ? "Révoqué" : grant.ends_at ? shortDate(String(grant.ends_at)) : "Lifetime"}</span></div>)}</div></article>
-      <article className="admin-panel"><h2>Facturation</h2><pre className="admin-json">{JSON.stringify(data.billing, null, 2)}</pre><div className="admin-stack">{data.transactions.map((transaction) => <div className="admin-row" key={`${transaction.provider_object_id}-${transaction.transaction_type}`}><div><strong>{String(transaction.transaction_type)}</strong><small>{String(transaction.status)}</small></div><span>{(Number(transaction.amount) / 100).toFixed(2)} {String(transaction.currency).toUpperCase()}</span></div>)}</div></article>
-      <article className="admin-panel"><h2>Support</h2><div className="admin-stack">{data.notes.map((note) => <div className="admin-row" key={String(note.id)}><div><strong>{String(note.category)}</strong><small>{String(note.body)}</small></div><span>{shortDate(String(note.created_at))}</span></div>)}</div></article>
-    </section>
-    <section className="admin-actions-section"><h2>Maintenance auditée</h2><AdminActionForm endpoint={`/api/pressay/admin/users/${id}/grants`} title="Accorder Pro" description="Le grant complète Stripe sans modifier l’abonnement." submitLabel="Créer le grant" fields={[{ name: "plan", label: "Plan", type: "select", options: [{ label: "Pressay Pro", value: "pro_byok" }] }, { name: "durationDays", label: "Durée en jours", type: "number", value: 30 }, { name: "reason", label: "Motif", required: true }]} confirmMessage="Confirmer l’attribution de ce droit ?" />
-    <AdminActionForm endpoint={`/api/pressay/admin/users/${id}/notes`} title="Ajouter une note support" description="Ne jamais coller de dictée, audio, presse-papiers, fichier ou secret." submitLabel="Ajouter" fields={[{ name: "category", label: "Catégorie", type: "select", options: ["general", "billing", "technical", "privacy", "security"].map((value) => ({ label: value, value })) }, { name: "body", label: "Note", required: true }, { name: "reason", label: "Motif d’audit", required: true }]} />
-    <AdminActionForm endpoint={`/api/pressay/admin/users/${id}/sign-out`} title="Déconnecter les sessions" submitLabel="Révoquer les sessions" fields={[{ name: "reason", label: "Motif", required: true }]} confirmMessage="Révoquer toutes les sessions web et macOS actives ?" />
-    <AdminActionForm endpoint={`/api/pressay/admin/users/${id}/deletion-jobs`} title="Programmer la suppression" description="Délai de récupération de sept jours. MFA récente obligatoire." submitLabel="Programmer" fields={[{ name: "confirmation", label: "Saisir DELETE", value: "" }, { name: "reason", label: "Motif", required: true }]} confirmMessage="Cette action programme la suppression du compte." /></section>
-  </>;
+  const { data: d, error } = await adminData<Detail>(
+    `admin/users/${encodeURIComponent(id)}`,
+  );
+  return (
+    <>
+      <Link href="/admin/users">← Utilisateurs</Link>
+      <AdminHeading
+        eyebrow="COMPTE / DONNÉES SERVEUR"
+        title={d?.account.email ?? "Utilisateur"}
+        detail={id}
+      />
+      {error}
+      {d ? (
+        <>
+          <p>
+            Offre effective : {d.account.entitlement.tier} ·{" "}
+            {d.account.entitlement.source} · jusqu’au{" "}
+            {adminDate(d.account.entitlement.validUntil)}
+          </p>
+          <p>
+            Cloud : {Math.ceil(d.usage.transcription.usedSeconds / 60)} minutes
+            et {d.usage.transformations.used} transformations ce mois.
+          </p>
+          <h2>Appareils</h2>
+          <AdminTable
+            headers={["Nom", "Version", "Canal", "Dernier contact"]}
+            rows={d.devices.map((v) => [
+              v.displayName,
+              v.appVersion,
+              v.appVariant,
+              adminDate(v.lastSeenAt),
+            ])}
+          />
+          <h2>Abonnements</h2>
+          <AdminTable
+            headers={[
+              "Fournisseur",
+              "Statut",
+              "Périodicité",
+              "Échéance",
+              "Environnement",
+            ]}
+            rows={d.subscriptions.map((s) => [
+              s.provider,
+              s.status,
+              s.billing_interval,
+              adminDate(s.current_period_ends_at),
+              s.apple_environment,
+            ])}
+          />
+          <h2>Accès offerts</h2>
+          <AdminTable
+            headers={["Origine", "Fin", "État", "Action"]}
+            rows={d.grants.map((g) => [
+              g.source,
+              adminDate(g.ends_at),
+              g.revoked_at ? "Révoqué" : "Accordé",
+              !g.revoked_at ? (
+                <AdminActionForm
+                  key={g.id}
+                  endpoint={`/api/pressay/admin/grants/${g.id}/revoke`}
+                  title="Révoquer cet accès"
+                  submitLabel="Révoquer"
+                  fields={[{ name: "reason", label: "Motif", required: true }]}
+                  confirmMessage="Retirer cet accès offert ? Les abonnements payants seront conservés."
+                />
+              ) : (
+                "—"
+              ),
+            ])}
+          />
+          <h2>Parrainages</h2>
+          <AdminTable
+            headers={["Parrain", "Filleul", "Statut"]}
+            rows={d.referrals.map((r) => [
+              <Link key="from" href={`/admin/users/${r.referrer_id}`}>
+                {r.referrer_id}
+              </Link>,
+              <Link key="to" href={`/admin/users/${r.referee_id}`}>
+                {r.referee_id}
+              </Link>,
+              r.status,
+            ])}
+          />
+        </>
+      ) : null}
+    </>
+  );
 }
-function shortDate(value: string) { return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(value)); }

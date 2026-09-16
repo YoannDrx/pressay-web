@@ -1,4 +1,31 @@
 import Link from "next/link";
-import { AccessClaimForm } from "@/components/account-actions";
-import { commercialIsConfigured } from "@/lib/pressay-api";
-export default async function AccessPage({ params }: { params: Promise<{ secret: string }> }) { const { secret } = await params; return <main className="auth-page"><div className="auth-placeholder"><span className="mono-label">PRESSAY / GUEST ACCESS</span><h1>Active ton accès.</h1><p>Connecte-toi, puis utilise ce lien à usage limité. Le secret n’est stocké que sous forme de hash.</p>{commercialIsConfigured() ? <AccessClaimForm delivery="link" presetSecret={secret} /> : <Link className="button" href={`/sign-in?redirect_url=${encodeURIComponent(`/access/${secret}`)}`}>Connexion</Link>}</div></main>; }
+import { redirect } from "next/navigation";
+import { AccessCodeForm } from "@/components/account-controls";
+import { accountLocale } from "@/lib/account-locale";
+import { getWebIdentity } from "@/lib/server-identity";
+export const metadata = {
+  robots: { index: false, follow: false },
+  referrer: "no-referrer",
+};
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ secret: string }>;
+}) {
+  const { secret } = await params;
+  const locale = await accountLocale();
+  const fr = locale === "fr";
+  if (!(await getWebIdentity()))
+    redirect(
+      "/sign-in?redirect_url=" + encodeURIComponent(`/access/${secret}`),
+    );
+  return (
+    <main className="auth-page" lang={locale}>
+      <div className="auth-placeholder">
+        <h1>{fr ? "Active ton accès offert" : "Activate your gift access"}</h1>
+        <AccessCodeForm locale={locale} presetSecret={secret} />
+        <Link href="/account">{fr ? "Mon compte" : "My account"}</Link>
+      </div>
+    </main>
+  );
+}
