@@ -23,6 +23,19 @@ const macOSClientID =
 const apiResource =
   process.env.PRESSAY_OAUTH_RESOURCE || "https://api.press-say.app";
 
+const authDatabase = new Pool({
+  connectionString: configured ? process.env.DATABASE_URL : fallbackDatabaseURL,
+  max: 5,
+  idleTimeoutMillis: 20_000,
+  // Allow a suspended database to resume before giving up on authentication.
+  connectionTimeoutMillis: 15_000,
+});
+authDatabase.on("error", () => {
+  // pg removes the failed idle client. Handle the event without logging user data
+  // or terminating every in-flight request in this server process.
+  console.error("[auth] idle_database_connection_failed");
+});
+
 async function generateAppleClientSecret(): Promise<string> {
   const clientID = process.env.APPLE_CLIENT_ID;
   const teamID = process.env.APPLE_TEAM_ID;
@@ -48,14 +61,7 @@ export const authOptions = {
   baseURL: appURL,
   basePath: "/api/auth",
   secret: configured ? process.env.BETTER_AUTH_SECRET : fallbackSecret,
-  database: new Pool({
-    connectionString: configured
-      ? process.env.DATABASE_URL
-      : fallbackDatabaseURL,
-    max: 5,
-    idleTimeoutMillis: 20_000,
-    connectionTimeoutMillis: 5_000,
-  }),
+  database: authDatabase,
   trustedOrigins: trustedAuthOrigins(),
   socialProviders: {
     google: {

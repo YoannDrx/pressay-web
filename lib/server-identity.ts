@@ -1,9 +1,11 @@
 import "server-only";
+import { cache } from "react";
 import { auth as clerkAuth } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { identityProvider, type IdentityProvider } from "@/lib/auth-env";
 import { readStepUpProof } from "@/lib/step-up";
+import { readSessionWithRetry } from "@/lib/session-read";
 
 export type WebIdentity = {
   provider: Exclude<IdentityProvider, "disabled">;
@@ -17,10 +19,15 @@ export type WebIdentity = {
   clerkToken?: string;
 };
 
-export async function getWebIdentity(): Promise<WebIdentity | null> {
+// Share one session lookup across the layout and account sections in this render.
+// React invalidates this cache for every server request; no identity is shared.
+export const getWebIdentity = cache(async (): Promise<WebIdentity | null> => {
   const provider = identityProvider();
   if (provider === "better-auth") {
-    const current = await auth.api.getSession({ headers: await headers() });
+    const requestHeaders = await headers();
+    const current = await readSessionWithRetry(() =>
+      auth.api.getSession({ headers: requestHeaders }),
+    );
     if (!current?.user?.id) return null;
     const stepUp = await readStepUpProof(current.user.id, current.session.id);
     return {
@@ -31,7 +38,7 @@ export async function getWebIdentity(): Promise<WebIdentity | null> {
       name: current.user.name,
       sessionID: current.session.id,
       stepUpAt: stepUp?.iat,
-      stepUpMethod: stepUp?.method
+      stepUpMethod: stepUp?.method,
     };
   }
   if (provider === "clerk") {
@@ -43,8 +50,8 @@ export async function getWebIdentity(): Promise<WebIdentity | null> {
       provider,
       subject: current.userId,
       emailVerified: false,
-      clerkToken: token
+      clerkToken: token,
     };
   }
   return null;
-}
+});
