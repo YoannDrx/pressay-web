@@ -33,6 +33,23 @@ terminée : le code, la dépendance et les domaines CSP Clerk ont été retirés
 Les variables `CLERK_*` et `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` peuvent être
 supprimées de tous les environnements Vercel.
 
+Avant le premier déploiement en Better Auth 1.7.7, exécuter
+`docs/migrations/2026-10-11-better-auth-1.7.7-account-issuer.sql` sur Neon
+(colonne `auth_accounts.issuer` rendue facultative).
+
+Le Cloud supprime l’identité web par `POST /api/internal/identity-deletion`
+(JWT HS256 signé avec `PRESSAY_INTERNAL_JWT_SECRET`, émetteur
+`PRESSAY_CLOUD_INTERNAL_JWT_ISSUER`, audience `pressay-web-internal`, 5 min
+maximum). Les jetons du proxy serveur portent l’audience
+`PRESSAY_WEB_PROXY_JWT_AUDIENCE` (`pressay-web-proxy` par défaut), identique
+côté Cloud.
+
+## Vérifications
+
+`pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm build` et
+`pnpm test:e2e` tournent en CI (`.github/workflows/ci.yml`), ainsi que la suite
+compte (`playwright.account.config.ts`) sur une base PostgreSQL jetable.
+
 ## Déploiement
 
 - production : `press-say.app` ;
