@@ -150,6 +150,7 @@ test("French landing exposes the product contract and metadata", async ({
 test("checkout result pages never grant Pro from a browser redirect", async ({
   page,
 }) => {
+  await page.goto("/fr");
   await page.goto("/checkout/success");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "en cours de confirmation",
@@ -300,15 +301,20 @@ test("English routes expose factual pricing and the current launch state", async
     await expect(page.getByRole("button", { name: /€69|€7\.99/ })).toHaveCount(
       0,
     );
-    if (!isProScopeValidated) {
+    if (!isProScopeValidated)
       await expect(
-        page.getByText("Features detailed before launch", { exact: true }),
+        page.getByText("Subscriptions open once each one has passed", {
+          exact: false,
+        }),
       ).toBeVisible();
-      await expect(
-        page.getByText("Apple Intelligence and BYOK", { exact: true }),
-      ).toHaveCount(0);
-    }
   }
+  // The real Pro scope is always listed, prices include VAT.
+  await expect(
+    page.getByText("Apple Intelligence and BYOK (your own key)", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByText("incl. VAT").first()).toBeVisible();
 });
 
 test("download page exposes the public release channel and checksum", async ({
@@ -513,4 +519,87 @@ test("Free and Pro stay centered with equal widths across public pages", async (
       ),
     ).toBe(true);
   }
+});
+
+test("unknown and malformed URLs answer a localized 404, never a 500", async ({
+  page,
+  request,
+}) => {
+  const missing = await page.goto("/en/does-not-exist");
+  expect(missing?.status()).toBe(404);
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "This page does not exist.",
+  );
+  for (const path of [
+    "/download/pressay%5C%5C%5C",
+    "/fr/privacy%5C",
+    "/fr/not-a-legal-page",
+  ]) {
+    const response = await request.get(path, { maxRedirects: 0 });
+    expect(response.status(), path).toBe(404);
+  }
+});
+
+test("pages declare their language, canonical URL and alternates", async ({
+  page,
+}) => {
+  await page.goto("/en/pricing");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    /\/en\/pricing$/,
+  );
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="fr-FR"]'),
+  ).toHaveAttribute("href", /\/fr\/pricing$/);
+  await page.goto("/fr/privacy");
+  await expect(page.locator("html")).toHaveAttribute("lang", "fr");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    /\/fr\/privacy$/,
+  );
+});
+
+test("language switch keeps the current page", async ({ page }) => {
+  await page.goto("/fr/security");
+  const english = page.locator(".language-switch a[hreflang=en]");
+  if (await english.isVisible())
+    await expect(english).toHaveAttribute("href", "/en/security");
+  else
+    await expect(
+      page.locator(".mobile-menu a[hreflang=en]"),
+    ).toHaveAttribute("href", "/en/security");
+});
+
+test("scripts run under a per-request nonce without unsafe-inline", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error" && /Content Security Policy/i.test(message.text()))
+      errors.push(message.text());
+  });
+  const first = await page.goto("/fr");
+  const second = await page.request.get("/fr");
+  const policy = first?.headers()["content-security-policy"] ?? "";
+  const script = policy.split(";").find((part) => part.trim().startsWith("script-src")) ?? "";
+  expect(script).toContain("'nonce-");
+  expect(script).not.toContain("unsafe-inline");
+  expect(policy).not.toContain("clerk");
+  expect(second.headers()["content-security-policy"]).not.toBe(policy);
+  for (const path of ["/en/pricing", "/fr/download", "/fr/privacy", "/sign-in?locale=fr", "/en/nope"])
+    await page.goto(path);
+  expect(errors).toEqual([]);
+});
+
+test("withdrawal page offers the model withdrawal form", async ({ page }) => {
+  await page.goto("/fr/withdrawal");
+  await expect(
+    page.getByRole("heading", { name: "Formulaire type de rétractation" }),
+  ).toBeVisible();
+  await page.goto("/en/withdrawal");
+  await expect(
+    page.getByRole("heading", { name: "Model withdrawal form" }),
+  ).toBeVisible();
 });

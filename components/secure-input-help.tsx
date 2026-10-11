@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ContentPage } from "@/components/content-page";
 import type { Locale } from "@/lib/content";
+import { supportEmail, supportMailto } from "@/lib/contact";
 
 export function SecureInputHelp({ locale }: { locale: Locale }) {
   const fr = locale === "fr";
@@ -72,9 +73,9 @@ export function SecureInputHelp({ locale }: { locale: Locale }) {
           <div className="legal-actions">
             <a
               className="button button-primary"
-              href="mailto:yoann.andrieux@gmail.com?subject=%5BPressay%5D%20Secure%20Input"
+              href={supportMailto("[Pressay] Secure Input")}
             >
-              yoann.andrieux@gmail.com
+              {supportEmail}
             </a>
             <Link className="button" href={`/${locale}/support`}>
               {fr ? "Tout le support" : "All support topics"}

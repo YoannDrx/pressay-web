@@ -27,3 +27,27 @@ test('selects a complete published release and bounds network waiting', async ()
   };
   assert.equal((await getPublicRelease()).prerelease, false);
 });
+const asset = (tag: string) => [
+  { name: 'Pressay.dmg', browser_download_url: `https://github.com/YoannDrx/pressay/releases/download/${tag}/Pressay.dmg` },
+  { name: 'Pressay.dmg.sha256', browser_download_url: `https://github.com/YoannDrx/pressay/releases/download/${tag}/Pressay.dmg.sha256` },
+];
+test('prefers the latest stable release over a newer prerelease', async () => {
+  globalThis.fetch = async () => Response.json([
+    { tag_name: 'v2.1.0-beta.1', prerelease: true, assets: asset('v2.1.0-beta.1') },
+    { tag_name: 'v2.0.1', prerelease: false, assets: [{ name: 'Pressay.dmg', browser_download_url: 'x' }] },
+    { tag_name: 'v2.0.0', prerelease: false, assets: asset('v2.0.0') },
+  ]);
+  const release = await getPublicRelease();
+  assert.equal(release.tag, 'v2.0.0');
+  assert.equal(release.prerelease, false);
+});
+test('serves the latest prerelease, flagged as beta, when no stable exists', async () => {
+  globalThis.fetch = async () => Response.json([
+    { tag_name: 'v2.0.0-rc.2', draft: true, prerelease: true, assets: asset('v2.0.0-rc.2') },
+    { tag_name: 'v2.0.0-rc.1', prerelease: true, assets: asset('v2.0.0-rc.1') },
+    { tag_name: 'v2.0.0-beta.3', prerelease: true, assets: asset('v2.0.0-beta.3') },
+  ]);
+  const release = await getPublicRelease();
+  assert.equal(release.tag, 'v2.0.0-rc.1');
+  assert.equal(release.prerelease, true);
+});

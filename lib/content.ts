@@ -54,8 +54,8 @@ export const plans = [
     monthly: "0 €",
     detailFr: "Sans compte obligatoire",
     detailEn: "No account required",
-    featuresFr: ["Dictée locale illimitée", "Raccourci, Voice Bar et insertion", "Dictionnaire de base", "Historique local facultatif"],
-    featuresEn: ["Unlimited local dictation", "Shortcut, Voice Bar and insertion", "Basic dictionary", "Optional local history"]
+    featuresFr: ["Dictée locale illimitée, hors ligne", "Modes Fidèle et Propre", "Raccourci, Voice Bar et insertion", "Commandes vocales de base et dictionnaire", "Historique local facultatif"],
+    featuresEn: ["Unlimited offline local dictation", "Faithful and Clean modes", "Shortcut, Voice Bar and insertion", "Basic voice commands and dictionary", "Optional local history"]
   },
   {
     code: "pro",
@@ -63,7 +63,9 @@ export const plans = [
     monthly: "7,99 € / mois",
     detailFr: "69 € / an · aucun essai automatique",
     detailEn: "€69 / year · no automatic trial",
-    featuresFr: ["Commandes Voice Bar avancées", "Modes et profils par application", "Apple Intelligence et BYOK", "Synchronisation chiffrée", "Quota Pressay Cloud"],
-    featuresEn: ["Advanced Voice Bar commands", "Modes and per-app profiles", "Apple Intelligence and BYOK", "Encrypted sync", "Pressay Cloud allowance"]
+    // Mirrors the Pro column of the desktop capability matrix
+    // (pressay/src-tauri/src/capabilities.rs).
+    featuresFr: ["Tout Free, plus :", "Modes de réécriture (Message, Email, Prompt, Commit, Ticket…) et modes personnalisés", "Profils par application", "Correction vocale du dernier résultat", "Apple Intelligence et BYOK (ta propre clé)", "Synchronisation chiffrée entre tes Mac", "Quota Pressay Cloud inclus", "Jusqu’à 3 Mac"],
+    featuresEn: ["Everything in Free, plus:", "Rewrite modes (Message, Email, Prompt, Commit, Ticket…) and custom modes", "Per-app profiles", "Voice correction of the last result", "Apple Intelligence and BYOK (your own key)", "Encrypted sync between your Macs", "Pressay Cloud allowance included", "Up to 3 Macs"]
   }
 ] as const;

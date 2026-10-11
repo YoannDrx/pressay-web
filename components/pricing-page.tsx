@@ -11,8 +11,8 @@ export function PricingPage({ locale }: { locale: Locale }) {
       ? "Free reste illimité en local et sans compte. Pro ajoute les workflows avancés et les routes validées affichées avant traitement."
       : "Free stays unlimited locally and without an account. Pro adds advanced workflows and validated routes shown before processing."
     : fr
-      ? "Free reste illimité en local et sans compte. Pro arrive bientôt : ses fonctionnalités seront détaillées ici avant l’ouverture des abonnements."
-      : "Free stays unlimited locally and without an account. Pro is coming soon: its features will be detailed here before subscriptions open.";
+      ? "Free reste illimité en local et sans compte. Pro ajoute les modes de réécriture, les profils par application, BYOK, Apple Intelligence, la synchronisation chiffrée et Pressay Cloud ; les abonnements ouvriront après leur validation."
+      : "Free stays unlimited locally and without an account. Pro adds rewrite modes, per-app profiles, BYOK, Apple Intelligence, encrypted sync and Pressay Cloud; subscriptions open once they are validated.";
   return (
     <ContentPage
       locale={locale}
@@ -31,11 +31,11 @@ export function PricingPage({ locale }: { locale: Locale }) {
           <table>
             <thead>
               <tr>
-                <th>Produit</th>
+                <th>{fr ? "Produit" : "Product"}</th>
                 <th>Free</th>
-                <th>Pro mensuel</th>
-                <th>Annuel</th>
-                <th>Lifetime</th>
+                <th>{fr ? "Pro mensuel" : "Pro monthly"}</th>
+                <th>{fr ? "Annuel" : "Annual"}</th>
+                <th>{fr ? "À vie" : "Lifetime"}</th>
                 <th>{fr ? "Angle" : "Focus"}</th>
               </tr>
             </thead>
@@ -43,8 +43,8 @@ export function PricingPage({ locale }: { locale: Locale }) {
               <tr className="our-row">
                 <th>Pressay</th>
                 <td>{fr ? "Local illimité" : "Unlimited local"}</td>
-                <td>7,99 €</td>
-                <td>69 €</td>
+                <td>{fr ? "7,99 €" : "€7.99"}</td>
+                <td>{fr ? "69 €" : "€69"}</td>
                 <td>—</td>
                 <td>
                   {fr
@@ -118,9 +118,13 @@ export function PricingPage({ locale }: { locale: Locale }) {
       <section className="plain-section">
         <h2>{fr ? "Pas de promesse silencieuse" : "No silent promise"}</h2>
         <p>
-          {fr
-            ? "Les offres payantes ouvriront prochainement. La dictée locale gratuite reste disponible sans compte. Aucun abonnement à vie n’est proposé."
-            : "Paid plans are coming soon. Free local dictation remains available without an account. No lifetime subscription is offered."}
+          {release.commercialOfferReady
+            ? fr
+              ? "Pro se résilie à tout moment depuis ton espace compte ; l’accès reste actif jusqu’à la fin de la période payée. La dictée locale gratuite reste disponible sans compte. Aucun abonnement à vie n’est proposé."
+              : "Cancel Pro at any time from your account; access continues until the end of the paid period. Free local dictation remains available without an account. No lifetime subscription is offered."
+            : fr
+              ? "Les offres payantes ouvriront prochainement. La dictée locale gratuite reste disponible sans compte. Aucun abonnement à vie n’est proposé."
+              : "Paid plans are coming soon. Free local dictation remains available without an account. No lifetime subscription is offered."}
         </p>
       </section>
     </ContentPage>
