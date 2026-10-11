@@ -1,5 +1,9 @@
-export function LandingEffects() {
-  return <script dangerouslySetInnerHTML={{ __html: `(() => {
+import { headers } from "next/headers";
+
+export async function LandingEffects() {
+  // The nonce lets this progressive-enhancement script pass the CSP.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  return <script nonce={nonce} dangerouslySetInnerHTML={{ __html: `(() => {
     const initialize = () => {
       const story = document.querySelector("[data-testid='scroll-story']");
       const reveals = Array.from(document.querySelectorAll("[data-reveal]"));
