@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { randomUUID, createHmac } from "node:crypto";
+import { randomUUID, createHmac, createHash } from "node:crypto";
 import { Pool } from "pg";
 test.skip(
   !process.env.WEB_TEST_DATABASE_URL,
@@ -513,4 +513,133 @@ test("Cloud-initiated identity deletion removes the user once, idempotently", as
   const replay = await call(await sign(userId), body);
   expect(replay.status()).toBe(200);
   expect(await replay.json()).toEqual({ deleted: false });
+});
+
+test("desktop OAuth: provider hint reaches sign-in, public client can revoke its refresh token", async ({
+  browser,
+  page,
+  request,
+}) => {
+  test.skip(test.info().project.name !== "desktop", "Protocol test, once");
+  const clientID = "w9ckUgrcFp7H7wNV";
+  const redirectURI = "pressay://oauth/callback";
+  const resource = "https://api.press-say.app";
+  // First request initializes Better Auth, which seeds the API resource.
+  const metadata = await (
+    await page.request.get("/.well-known/oauth-authorization-server")
+  ).json();
+  // The production client is registered once by the owner; mirror it locally.
+  await pool.query(
+    `INSERT INTO auth_oauth_clients(id,"clientId","redirectUris","tokenEndpointAuthMethod","grantTypes","responseTypes","requirePKCE","skipConsent",scopes,name,"createdAt","updatedAt")
+     VALUES($1,$2,$3,'none',$4,$5,true,true,$6,'Pressay for Mac',now(),now()) ON CONFLICT ("clientId") DO NOTHING`,
+    [
+      randomUUID(),
+      clientID,
+      JSON.stringify([redirectURI]),
+      JSON.stringify(["authorization_code", "refresh_token"]),
+      JSON.stringify(["code"]),
+      JSON.stringify(["openid", "profile", "email", "offline_access"]),
+    ],
+  );
+  await pool.query(
+    `INSERT INTO auth_oauth_client_resources(id,"clientId","resourceId","createdAt") VALUES($1,$2,$3,now()) ON CONFLICT DO NOTHING`,
+    [randomUUID(), clientID, resource],
+  );
+
+  expect(metadata.revocation_endpoint).toBe(
+    "http://127.0.0.1:31972/api/auth/oauth2/revoke",
+  );
+  expect(metadata.code_challenge_methods_supported).toContain("S256");
+  const openid = await (
+    await page.request.get("/.well-known/openid-configuration")
+  ).json();
+  expect(openid.revocation_endpoint).toBe(metadata.revocation_endpoint);
+
+  const verifier = randomUUID() + randomUUID();
+  const challenge = createHash("sha256").update(verifier).digest("base64url");
+  const authorize = (provider?: string) => {
+    const query = new URLSearchParams({
+      response_type: "code",
+      client_id: clientID,
+      redirect_uri: redirectURI,
+      scope: "openid profile email offline_access",
+      state: randomUUID(),
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      resource,
+    });
+    if (provider) query.set("provider", provider);
+    return `/api/auth/oauth2/authorize?${query}`;
+  };
+
+  // Signed out: the Mac app's hint survives the redirect to /sign-in and
+  // starts Google directly (the provider itself is never contacted).
+  const anonymous = await browser.newContext({ baseURL: "http://127.0.0.1:31972" });
+  const signedOut = await anonymous.newPage();
+  const signInURLs: string[] = [];
+  signedOut.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/sign-in") signInURLs.push(request.url());
+  });
+  await signedOut.route("https://accounts.google.com/**", (route) =>
+    route.fulfill({ status: 200, contentType: "text/html", body: "<p>google</p>" }),
+  );
+  await signedOut.goto(authorize("google"));
+  await signedOut.waitForURL(/^https:\/\/accounts\.google\.com\//);
+  const signIn = new URL(signInURLs[0]!);
+  expect(signIn.searchParams.get("provider")).toBe("google");
+  expect(signIn.searchParams.get("sig")).toBeTruthy();
+  await anonymous.close();
+
+  // Signed in: code -> tokens -> RFC 7009 revocation by the public client.
+  // Token calls come from the app, which has no browser cookies.
+  const redirect = await page.request.get(authorize("apple"), { maxRedirects: 0 });
+  const location = redirect.headers()["location"] ?? (await redirect.json()).url;
+  const code = new URL(location).searchParams.get("code");
+  expect(code).toBeTruthy();
+  const tokens = await (
+    await request.post("/api/auth/oauth2/token", {
+      form: {
+        grant_type: "authorization_code",
+        code: code!,
+        redirect_uri: redirectURI,
+        client_id: clientID,
+        code_verifier: verifier,
+        resource,
+      },
+    })
+  ).json();
+  expect(tokens.refresh_token).toBeTruthy();
+  const revoked = await request.post(metadata.revocation_endpoint, {
+    form: {
+      token: tokens.refresh_token,
+      token_type_hint: "refresh_token",
+      client_id: clientID,
+    },
+  });
+  expect(revoked.status()).toBe(200);
+  const refreshed = await request.post("/api/auth/oauth2/token", {
+    form: {
+      grant_type: "refresh_token",
+      refresh_token: tokens.refresh_token,
+      client_id: clientID,
+      resource,
+    },
+  });
+  expect(refreshed.status()).toBeGreaterThanOrEqual(400);
+});
+
+test("pages linked from the Mac app stay live", async ({ page }) => {
+  test.skip(test.info().project.name !== "desktop", "Routing test, once");
+  for (const path of [
+    "/fr/pricing?source=pressay-desktop",
+    "/en/pricing?source=pressay-desktop",
+    "/fr/terms",
+    "/en/terms",
+    "/privacy",
+    "/support",
+    "/account/billing",
+  ]) {
+    const response = await page.goto(path);
+    expect(response?.status(), path).toBe(200);
+  }
 });
