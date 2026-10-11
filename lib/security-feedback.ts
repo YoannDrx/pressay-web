@@ -69,6 +69,7 @@ export function securityFailure(
     };
   if (
     code === "INVALID_TOTP" ||
+    code === "TOTP_CODE_REQUIRED" ||
     code === "INVALID_TWO_FACTOR_COOKIE" ||
     code === "INVALID_CODE"
   )

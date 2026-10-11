@@ -74,6 +74,9 @@ async function createInternalAPIToken(
             pressay_step_up_at: identity.stepUpAt,
             pressay_step_up_method: identity.stepUpMethod,
             token_use: "pressay_web_proxy",
+            // Dedicated audience: a proxy token (which may carry step-up
+            // proof) can never be replayed as a Mac API access token.
+            aud: webProxyAudience(),
           },
         },
       });
@@ -105,6 +108,14 @@ async function createInternalAPIToken(
     .setIssuedAt()
     .setExpirationTime("2m")
     .sign(new TextEncoder().encode(secret));
+}
+
+/**
+ * Must equal the Cloud's PRESSAY_WEB_PROXY_JWT_AUDIENCE. The HS256 fallback
+ * below keeps the legacy "pressay-api" audience the Cloud expects there.
+ */
+function webProxyAudience(): string {
+  return process.env.PRESSAY_WEB_PROXY_JWT_AUDIENCE?.trim() || "pressay-web-proxy";
 }
 
 function validInternalJWTSecret(): string | null {

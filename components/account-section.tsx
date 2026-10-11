@@ -14,6 +14,7 @@ import {
   AccessCodeForm,
   ReferralLink,
 } from "./account-controls";
+import { AccountDeletion } from "./account-deletion";
 import { AccountSecurity } from "./account-security";
 import { ReferralAttributor } from "./account-actions";
 export async function AccountSection({
@@ -44,17 +45,7 @@ export async function AccountSection({
           <Link href={`/${locale}/privacy`}>
             {fr ? "Politique de confidentialité" : "Privacy policy"}
           </Link>
-          <AccountMutation
-            endpoint="delete-account"
-            method="DELETE"
-            locale={locale}
-            label={fr ? "Supprimer mon compte" : "Delete my account"}
-            confirm={
-              fr
-                ? "Supprimer définitivement ton compte et révoquer tes accès Cloud ? Un abonnement Apple doit être annulé dans les réglages Apple."
-                : "Permanently delete your account and revoke Cloud access? Apple subscriptions must be cancelled in Apple settings."
-            }
-          />
+          <AccountDeletion locale={locale} />
         </section>
       </>
     );

@@ -74,6 +74,8 @@ export function SessionNavigation({ locale }: { locale: Locale }) {
       const channel = new BroadcastChannel("pressay-session");
       channel.postMessage("signed-out");
       channel.close();
+      // Full reload so no signed-in view survives in the router cache.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign(`/${locale}`);
     } catch {
       setFailed(true);

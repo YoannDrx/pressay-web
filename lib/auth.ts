@@ -3,8 +3,10 @@ import { passkey } from "@better-auth/passkey";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { jwt, twoFactor } from "better-auth/plugins";
 import { APIError } from "better-auth/api";
-import { importPKCS8, SignJWT } from "jose";
 import { Pool } from "pg";
+import { generateAppleClientSecret } from "@/lib/apple";
+import { appleDeletionAcknowledged } from "@/lib/account-deletion";
+import { secondFactorChangeGuard } from "@/lib/second-factor-guard";
 import {
   appleAuthIsConfigured,
   betterAuthIsConfigured,
@@ -36,26 +38,6 @@ authDatabase.on("error", () => {
   console.error("[auth] idle_database_connection_failed");
 });
 
-async function generateAppleClientSecret(): Promise<string> {
-  const clientID = process.env.APPLE_CLIENT_ID;
-  const teamID = process.env.APPLE_TEAM_ID;
-  const keyID = process.env.APPLE_KEY_ID;
-  const privateKey = process.env.APPLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-  if (!clientID || !teamID || !keyID || !privateKey) {
-    throw new Error("Sign in with Apple is not configured");
-  }
-  const signingKey = await importPKCS8(privateKey, "ES256");
-  const now = Math.floor(Date.now() / 1_000);
-  return new SignJWT({})
-    .setProtectedHeader({ alg: "ES256", kid: keyID })
-    .setIssuer(teamID)
-    .setSubject(clientID)
-    .setAudience("https://appleid.apple.com")
-    .setIssuedAt(now)
-    .setExpirationTime(now + 180 * 24 * 60 * 60)
-    .sign(signingKey);
-}
-
 export const authOptions = {
   appName: "Pressay",
   baseURL: appURL,
@@ -63,6 +45,10 @@ export const authOptions = {
   secret: configured ? process.env.BETTER_AUTH_SECRET : fallbackSecret,
   database: authDatabase,
   trustedOrigins: trustedAuthOrigins(),
+  // Errors raised before the OAuth state is known (expired state cookie,
+  // cancelled consent without state) land on the sign-in page, which explains
+  // them, instead of Better Auth's bare /api/auth/error page.
+  onAPIError: { errorURL: `${appURL}/sign-in` },
   socialProviders: {
     google: {
       clientId:
@@ -93,15 +79,38 @@ export const authOptions = {
     modelName: "auth_users",
     deleteUser: {
       enabled: true,
-      beforeDelete: async () => {
+      beforeDelete: async (user, request) => {
         // The provider also exposes /delete-user. Always enqueue Cloud cleanup first,
         // including calls made directly to that endpoint.
         const { pressayAPI } = await import("@/lib/pressay-api");
-        const result = await pressayAPI("me", { method: "DELETE" });
+        const acknowledged = appleDeletionAcknowledged(request);
+        const result = await pressayAPI(
+          acknowledged ? "me?acknowledgeAppleSubscription=true" : "me",
+          { method: "DELETE" },
+        );
+        if (result.status === 409) {
+          const payload = await result.json().catch(() => null);
+          const code =
+            typeof payload?.error === "string"
+              ? payload.error
+              : payload?.error?.code;
+          if (code === "apple_subscription_active")
+            throw new APIError("CONFLICT", {
+              code: "APPLE_SUBSCRIPTION_ACTIVE",
+              message: "An Apple subscription is still active",
+            });
+        }
         if (!result.ok && result.status !== 404)
           throw new APIError("SERVICE_UNAVAILABLE", {
             message: "Account cleanup is temporarily unavailable",
           });
+        // Cloud cleanup is queued: revoke Sign in with Apple (best effort)
+        // and remove passkeys, authenticators and OAuth grants before Better
+        // Auth deletes the sessions, accounts and user row.
+        const { purgeIdentityDependents } = await import(
+          "@/lib/identity-deletion-store"
+        );
+        await purgeIdentityDependents(user.id);
       },
     },
   },
@@ -110,7 +119,9 @@ export const authOptions = {
     expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,
     freshAge: 60 * 10,
-    cookieCache: { enabled: false },
+    // A short signed cache avoids one database read per navigation refresh.
+    // Sensitive endpoints (deletion, second factor) bypass it.
+    cookieCache: { enabled: true, maxAge: 60 },
   },
   verification: {
     modelName: "auth_verifications",
@@ -127,6 +138,9 @@ export const authOptions = {
       "/sign-in/passkey": { window: 60, max: 10 },
       "/two-factor/verify-totp": { window: 60, max: 10 },
       "/two-factor/verify-backup-code": { window: 60, max: 5 },
+      "/two-factor/disable": { window: 60, max: 10 },
+      "/two-factor/generate-backup-codes": { window: 60, max: 10 },
+      "/delete-user": { window: 60, max: 10 },
     },
   },
   advanced: {
@@ -150,6 +164,7 @@ export const authOptions = {
   },
   disabledPaths: ["/token"],
   plugins: [
+    secondFactorChangeGuard(),
     twoFactor({
       issuer: "Pressay",
       allowPasswordless: true,
@@ -238,4 +253,36 @@ export const authOptions = {
   ],
 } satisfies BetterAuthOptions;
 
-export const auth = betterAuth(authOptions);
+function createAuth() {
+  return betterAuth(authOptions);
+}
+type Auth = ReturnType<typeof createAuth>;
+let currentAuth: Auth | null = null;
+
+/**
+ * Better Auth initializes once per instance and memoizes the result. Its
+ * initialization reads the database (OAuth resource seeding), so a suspended
+ * Neon branch that times out during a cold start used to leave a rejected
+ * promise behind: unhandled when no request awaited it yet (terminating the
+ * Node.js process) and permanently failing every later request otherwise.
+ * Observe the rejection immediately and let the next request start over.
+ */
+function authInstance(): Auth {
+  if (currentAuth) return currentAuth;
+  const created = createAuth();
+  currentAuth = created;
+  created.$context.catch((error: unknown) => {
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code?: unknown }).code)
+        : "unknown";
+    console.error("[auth] initialization_failed", code);
+    if (currentAuth === created) currentAuth = null;
+  });
+  return created;
+}
+
+export const auth: Auth = new Proxy({} as Auth, {
+  get: (_target, property) => Reflect.get(authInstance(), property),
+  has: (_target, property) => Reflect.has(authInstance(), property),
+});

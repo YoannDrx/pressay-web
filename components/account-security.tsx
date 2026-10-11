@@ -33,6 +33,11 @@ export function AccountSecurity({
   >({});
   const [totpURI, setTotpURI] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  // Disabling the authenticator or replacing backup codes requires a current
+  // code from that authenticator (server-side guard), not just the session.
+  const [codeAction, setCodeAction] = useState<"disable" | "backup" | null>(
+    null,
+  );
   const [sessions, setSessions] = useState<BrowserSession[]>(initialSessions);
 
   const loadSessions = useCallback(async () => {
@@ -161,41 +166,33 @@ export function AccountSecurity({
     });
   }
 
-  async function regenerateBackupCodes() {
-    if (
-      !window.confirm(
-        tr(
-          "Les anciens codes de secours seront invalidés. Continuer ?",
-          "Your old backup codes will be invalidated. Continue?",
-        ),
-      )
-    )
-      return;
-    await run("backup", "totp", async () => {
-      const result = await authClient.twoFactor.generateBackupCodes({});
+  async function confirmWithCode(formData: FormData) {
+    const action = codeAction;
+    if (!action) return;
+    const code = String(formData.get("code") ?? "").replace(/[\s-]/g, "");
+    await run(action === "disable" ? "totp-disable" : "backup", "totp", async () => {
+      const path =
+        action === "disable"
+          ? "/two-factor/disable"
+          : "/two-factor/generate-backup-codes";
+      const result = await authClient.$fetch<{ backupCodes?: string[] }>(path, {
+        method: "POST",
+        body: { code },
+      });
       if (result.error) throw result.error;
-      setBackupCodes(result.data.backupCodes);
-      success(
-        "totp",
-        "Nouveaux codes créés. Les anciens codes ne sont plus valides.",
-        "New backup codes created. Previous codes are no longer valid.",
-      );
-    });
-  }
-
-  async function disableTOTP() {
-    if (
-      !window.confirm(
-        tr("Désactiver la validation TOTP ?", "Disable TOTP verification?"),
-      )
-    )
-      return;
-    await run("totp-disable", "totp", async () => {
-      const result = await authClient.twoFactor.disable({});
-      if (result.error) throw result.error;
-      setBackupCodes([]);
-      success("totp", "Authenticator désactivé.", "Authenticator disabled.");
-      await session.refetch();
+      setCodeAction(null);
+      if (action === "disable") {
+        setBackupCodes([]);
+        success("totp", "Authenticator désactivé.", "Authenticator disabled.");
+        await session.refetch();
+      } else {
+        setBackupCodes(result.data?.backupCodes ?? []);
+        success(
+          "totp",
+          "Nouveaux codes créés. Les anciens codes ne sont plus valides.",
+          "New backup codes created. Previous codes are no longer valid.",
+        );
+      }
     });
   }
 
@@ -385,18 +382,61 @@ export function AccountSecurity({
             <button
               className="button button-small"
               disabled={Boolean(pending)}
-              onClick={regenerateBackupCodes}
+              onClick={() => setCodeAction("backup")}
             >
               {tr("Nouveaux codes de secours", "New backup codes")}
             </button>
             <button
               className="account-link-button danger"
               disabled={Boolean(pending)}
-              onClick={disableTOTP}
+              onClick={() => setCodeAction("disable")}
             >
               {tr("Désactiver TOTP", "Disable TOTP")}
             </button>
           </div>
+        ) : null}
+        {twoFactorEnabled && codeAction ? (
+          <form className="totp-confirm" action={confirmWithCode}>
+            <p>
+              {codeAction === "disable"
+                ? tr(
+                    "Pour désactiver Authenticator, saisis un code actuel de ton application.",
+                    "To disable Authenticator, enter a current code from your app.",
+                  )
+                : tr(
+                    "Les anciens codes de secours seront invalidés. Saisis un code actuel de ton application pour continuer.",
+                    "Your old backup codes will be invalidated. Enter a current code from your app to continue.",
+                  )}
+            </p>
+            <label>
+              {tr("Code à 6 chiffres", "6-digit code")}
+              <input
+                name="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9 ]{6,7}"
+                required
+              />
+            </label>
+            <div className="account-actions">
+              <button
+                className={`button button-small${codeAction === "disable" ? " danger" : ""}`}
+                disabled={Boolean(pending)}
+              >
+                {codeAction === "disable"
+                  ? tr("Désactiver", "Disable")
+                  : tr("Créer de nouveaux codes", "Create new codes")}
+              </button>
+              <button
+                type="button"
+                className="button button-small"
+                disabled={Boolean(pending)}
+                onClick={() => setCodeAction(null)}
+              >
+                {tr("Annuler", "Cancel")}
+              </button>
+            </div>
+          </form>
         ) : null}
         {notice("totp")}
         {backupCodes.length ? (
@@ -408,8 +448,8 @@ export function AccountSecurity({
         <h2>{tr("Appareils connectés", "Browser sessions")}</h2>
         <p>
           {tr(
-            "Révoquer une session web prend effet immédiatement. Gère tes Mac depuis l’onglet Appareils.",
-            "Revoking a browser session takes effect immediately. Manage your Macs from the Devices tab.",
+            "Révoquer une session web prend effet en moins d’une minute. Gère tes Mac depuis l’onglet Appareils.",
+            "Revoking a browser session takes effect within a minute. Manage your Macs from the Devices tab.",
           )}
         </p>
         <div className="security-key-list">

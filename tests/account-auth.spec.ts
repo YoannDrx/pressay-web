@@ -351,3 +351,166 @@ test("security confirms TOTP enrollment and preserves admin verification after r
       .filter({ hasText: "Actions sensibles autorisées" }),
   ).toBeVisible();
 });
+
+test("Google sign-in redirects to Google with the exact callback URI and shows errors", async ({
+  page,
+  context,
+}) => {
+  await context.clearCookies();
+  // Never reach the real provider: capture the authorization request instead.
+  let authorize: URL | null = null;
+  await page.route("https://accounts.google.com/**", async (route) => {
+    authorize = new URL(route.request().url());
+    await route.fulfill({ status: 200, contentType: "text/html", body: "<p>google</p>" });
+  });
+  await page.goto("/sign-in?locale=fr&provider=google&redirect_url=%2Faccount");
+  await page.waitForURL(/^https:\/\/accounts\.google\.com\//);
+  const url = authorize! as URL;
+  expect(url.origin + url.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
+  expect(url.searchParams.get("redirect_uri")).toBe(
+    "http://127.0.0.1:31972/api/auth/callback/google",
+  );
+  expect(url.searchParams.get("client_id")).toBe("local-test");
+  expect(url.searchParams.get("response_type")).toBe("code");
+  expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+  expect(url.searchParams.get("state")).toBeTruthy();
+
+  // Back from the provider with an error: explained, retry offered, no loop.
+  authorize = null;
+  await page.goto("/sign-in?locale=fr&provider=google&error=access_denied&error_description=denied");
+  await expect(page.getByRole("alert").getByText("Connexion annulée.")).toBeVisible();
+  const buttons = page.locator(".auth-provider-actions > button");
+  await expect(buttons.first()).toHaveText("Continuer avec Google");
+  await page.waitForTimeout(500);
+  expect(authorize).toBeNull();
+});
+
+test("TOTP cannot be disabled without a current authenticator code", async ({
+  page,
+}) => {
+  await page.goto("/fr");
+  await page.goto("/account/security");
+  const totp = page.getByRole("region", { name: "Application Authenticator" });
+  await totp.getByRole("button", { name: "Configurer une application" }).click();
+  const uri = await totp
+    .getByRole("link", { name: "Ouvrir dans l’application Authenticator" })
+    .getAttribute("href");
+  const secret = new URL(uri!).searchParams.get("secret")!;
+  const bits = [...secret.toUpperCase().replace(/=+$/, "")]
+    .map((c) => "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".indexOf(c).toString(2).padStart(5, "0"))
+    .join("");
+  const key = Buffer.from(bits.match(/.{8}/g)!.map((b) => parseInt(b, 2)));
+  const generate = () => {
+    const counter = Buffer.alloc(8);
+    counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
+    const hash = createHmac("sha1", key).update(counter).digest();
+    const offset = hash[hash.length - 1] & 15;
+    return String((hash.readUInt32BE(offset) & 0x7fffffff) % 1000000).padStart(6, "0");
+  };
+  await totp.getByLabel("Code à 6 chiffres").fill(generate());
+  await totp.getByRole("button", { name: "Valider et activer" }).click();
+  await expect(totp.getByText("✓ Activé et vérifié", { exact: true })).toBeVisible();
+
+  // A session cookie alone is not enough: the API refuses without a code.
+  const refused = await page.request.post("/api/auth/two-factor/disable", {
+    data: {},
+    headers: { Origin: "http://127.0.0.1:31972" },
+  });
+  expect(refused.status()).toBe(403);
+  expect((await refused.json()).code).toBe("TOTP_CODE_REQUIRED");
+
+  await totp.getByRole("button", { name: "Désactiver TOTP" }).click();
+  await totp.getByLabel("Code à 6 chiffres").fill("000000");
+  await totp.getByRole("button", { name: "Désactiver", exact: true }).click();
+  await expect(totp.getByRole("alert").filter({ hasText: "Code incorrect" })).toBeVisible();
+  await expect(totp.getByText("✓ Activé et vérifié", { exact: true })).toBeVisible();
+  await totp.getByLabel("Code à 6 chiffres").fill(generate());
+  await totp.getByRole("button", { name: "Désactiver", exact: true }).click();
+  await expect(totp.getByText("Authenticator désactivé.")).toBeVisible();
+});
+
+test("account deletion asks for a fresh sign-in, then warns about an Apple subscription", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/fr");
+  await page.goto("/account/security");
+  // Age the session past Better Auth's freshness window.
+  await pool.query(
+    `UPDATE auth_sessions SET "createdAt" = now() - interval '2 days' WHERE "userId" = (SELECT id FROM auth_users ORDER BY "createdAt" DESC LIMIT 1)`,
+  );
+  await page.getByRole("button", { name: "Supprimer mon compte" }).click();
+  await page.getByRole("button", { name: "Supprimer définitivement" }).click();
+  await expect(page.getByText("Confirme ton identité.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Confirmer avec Google" })).toBeVisible();
+
+  // Fresh again (as after re-authentication), with an active Apple subscription.
+  await pool.query(
+    `UPDATE auth_sessions SET "createdAt" = now() WHERE "userId" = (SELECT id FROM auth_users ORDER BY "createdAt" DESC LIMIT 1)`,
+  );
+  await request.post("http://127.0.0.1:31973/fixture/apple-subscription");
+  try {
+    await page.goto("/account/security?resume=delete-account");
+    await expect(page.getByText("Connexion confirmée.")).toBeVisible();
+    await expect(page).toHaveURL(/\/account\/security$/);
+    await page.getByRole("button", { name: "Supprimer définitivement" }).click();
+    await expect(page.getByText("Un abonnement Apple est encore actif.")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Gérer mes abonnements Apple" }),
+    ).toHaveAttribute("href", "https://apps.apple.com/account/subscriptions");
+    await page.getByRole("button", { name: "Supprimer quand même" }).click();
+    await expect(page).toHaveURL(/\/fr$/);
+    // Proxy tokens use their dedicated audience, never the Mac API one.
+    const claims = await (
+      await request.get("http://127.0.0.1:31973/fixture/last-token")
+    ).json();
+    expect(claims).toEqual({ aud: "pressay-web-proxy", token_use: "pressay_web_proxy" });
+  } finally {
+    await request.delete("http://127.0.0.1:31973/fixture/apple-subscription");
+  }
+});
+
+test("Cloud-initiated identity deletion removes the user once, idempotently", async ({
+  request,
+}) => {
+  test.skip(test.info().project.name !== "desktop", "API-only contract test");
+  const { SignJWT } = await import("jose");
+  const { rows } = await pool.query(
+    'SELECT id FROM auth_users ORDER BY "createdAt" DESC LIMIT 1',
+  );
+  const userId = rows[0].id as string;
+  const sign = (subject: string, secret = process.env.PRESSAY_INTERNAL_JWT_SECRET!) =>
+    new SignJWT({})
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuer("https://api.press-say.app/internal")
+      .setAudience("pressay-web-internal")
+      .setSubject(subject)
+      .setJti(randomUUID())
+      .setIssuedAt()
+      .setExpirationTime("2m")
+      .sign(new TextEncoder().encode(secret));
+  const call = async (token: string, body: unknown) =>
+    request.post("/api/internal/identity-deletion", {
+      headers: { Authorization: `Bearer ${token}` },
+      data: body,
+    });
+  const body = { userId, reason: "account_deleted" };
+
+  const forged = await call(await sign(userId, "x".repeat(40)), body);
+  expect(forged.status()).toBe(401);
+  const mismatch = await call(await sign("someone-else"), body);
+  expect(mismatch.status()).toBe(401);
+
+  const first = await call(await sign(userId), body);
+  expect(first.status()).toBe(200);
+  expect(await first.json()).toEqual({ deleted: true });
+  const remaining = await pool.query(
+    'SELECT (SELECT count(*) FROM auth_users WHERE id = $1) AS users, (SELECT count(*) FROM auth_sessions WHERE "userId" = $1) AS sessions',
+    [userId],
+  );
+  expect(remaining.rows[0]).toEqual({ users: "0", sessions: "0" });
+
+  const replay = await call(await sign(userId), body);
+  expect(replay.status()).toBe(200);
+  expect(await replay.json()).toEqual({ deleted: false });
+});

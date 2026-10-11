@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
 export function AccountMutation({
   endpoint,
   method = "POST",
@@ -23,35 +22,19 @@ export function AccountMutation({
     setPending(true);
     setError("");
     try {
-      if (endpoint === "delete-account") {
-        const result = await authClient.deleteUser({
-          callbackURL: `/${locale}`,
-        });
-        if (result.error) {
-          const expired =
-            result.error.status === 401 || result.error.status === 403;
-          setError(
-            expired
-              ? locale === "fr"
-                ? "Reconnecte-toi puis réessaie. La suppression exige une connexion récente."
-                : "Sign in again and retry. Account deletion requires a recent sign-in."
-              : locale === "fr"
-                ? "Suppression temporairement indisponible. Réessaie plus tard."
-                : "Account deletion is temporarily unavailable. Please retry later.",
-          );
-          return;
-        }
-        window.location.assign(`/${locale}`);
-        return;
-      }
       const r = await fetch(endpoint, {
         method,
         headers: { "Content-Type": "application/json" },
         body: method === "POST" ? "{}" : undefined,
       });
       const result = await r.json().catch(() => null);
-      if (!r.ok) throw new Error();
+      if (!r.ok) {
+        setError(mutationError(r.status, locale));
+        return;
+      }
       if (result?.url) window.location.assign(result.url);
+      // Full reload after the account itself changed.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       else if (endpoint.endsWith("/me")) window.location.assign(`/${locale}`);
       else router.refresh();
     } catch {
@@ -73,6 +56,29 @@ export function AccountMutation({
     </div>
   );
 }
+function mutationError(status: number, locale: "fr" | "en"): string {
+  const fr = locale === "fr";
+  if (status === 401)
+    return fr
+      ? "Ta session a expiré. Recharge la page pour te reconnecter."
+      : "Your session expired. Reload the page to sign in again.";
+  if (status === 403)
+    return fr
+      ? "Cette action n’est pas autorisée pour ce compte."
+      : "This action is not allowed for this account.";
+  if (status === 404)
+    return fr
+      ? "Cet élément n’existe plus. Recharge la page."
+      : "This item no longer exists. Reload the page.";
+  if (status === 429)
+    return fr
+      ? "Trop de tentatives. Patiente une minute."
+      : "Too many attempts. Wait a minute.";
+  return fr
+    ? "Service momentanément indisponible. Réessaie dans quelques minutes."
+    : "Service temporarily unavailable. Try again in a few minutes.";
+}
+
 export function AccessCodeForm({
   locale,
   presetSecret = "",
@@ -95,6 +101,7 @@ export function AccessCodeForm({
       });
       const data = await r.json().catch(() => null);
       if (r.status === 401) {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.assign(
           "/sign-in?redirect_url=" + encodeURIComponent(location.pathname),
         );
