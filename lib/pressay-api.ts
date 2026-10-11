@@ -10,7 +10,7 @@ import { getWebIdentity, type WebIdentity } from "@/lib/server-identity";
 export function commercialIsConfigured(): boolean {
   const provider = identityProvider();
   if (!process.env.PRESSAY_API_URL || provider === "disabled") return false;
-  return provider === "clerk" || validInternalJWTSecret() !== null;
+  return validInternalJWTSecret() !== null;
 }
 
 export function commercialCheckoutIsEnabled(): boolean {
@@ -33,7 +33,7 @@ export async function pressayAPI(
   const identity = await getWebIdentity();
   if (!identity)
     return Response.json({ error: "authentication_required" }, { status: 401 });
-  const token = identity.clerkToken ?? (await createInternalAPIToken(identity));
+  const token = await createInternalAPIToken(identity);
   if (!token)
     return Response.json({ error: "api_token_unavailable" }, { status: 401 });
   const base = normalizedAPIURL();

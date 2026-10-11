@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getWebIdentity } from "@/lib/server-identity";
 import { safeLocalRedirect } from "@/lib/safe-redirect";
 import { accountLocale } from "@/lib/account-locale";
-import { ClerkProvider, SignIn } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { BetterAuthSignIn } from "@/components/better-auth-sign-in";
@@ -36,17 +35,6 @@ export default async function SignInPage({
           callbackURL={callbackURL}
           appleEnabled={appleAuthIsConfigured()}
         />
-      ) : provider === "clerk" ? (
-        <ClerkProvider
-          publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-        >
-          <SignIn
-            fallbackRedirectUrl={callbackURL}
-            signUpFallbackRedirectUrl={callbackURL}
-            signUpUrl="/sign-up"
-            withSignUp
-          />
-        </ClerkProvider>
       ) : (
         <div className="auth-placeholder">
           <span className="mono-label">PRESSAY</span>

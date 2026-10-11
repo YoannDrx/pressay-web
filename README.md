@@ -25,18 +25,13 @@ Google OAuth, sessions, passkeys, TOTP et le fournisseur OAuth 2.1 macOS
 utilisent les tables `auth_*` de Neon. Aucun secret Better Auth, Google ou JWT
 ne doit utiliser le préfixe `NEXT_PUBLIC_`.
 
-## Migration Clerk → Better Auth
+## Identité
 
-1. Appliquer `backend/db/migrations/0009_better_auth_foundation.sql`, puis
-   `0010_better_auth_account_issuer.sql` sur une branche Neon de staging.
-2. Configurer les variables Better Auth des deux projets et conserver Clerk
-   pendant la fenêtre de rollback.
-3. Depuis `backend`, exécuter `pnpm auth:migrate-clerk` pour le dry-run, puis
-   `pnpm auth:migrate-clerk -- --apply`. Les IDs Clerk sont conservés ; les
-   données commerciales ne changent pas. Les sessions ne sont pas importées.
-4. Activer `AUTH_PROVIDER=better-auth` en staging, tester Google, passkey, TOTP,
-   l’espace compte, l’admin et la connexion macOS PKCE.
-5. Basculer la production. Retirer Clerk seulement après la période de rollback.
+Better Auth est l’unique fournisseur d’identité (Google, Apple, passkeys, TOTP
+et fournisseur OAuth 2.1 de l’app macOS). La migration depuis Clerk est
+terminée : le code, la dépendance et les domaines CSP Clerk ont été retirés.
+Les variables `CLERK_*` et `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` peuvent être
+supprimées de tous les environnements Vercel.
 
 ## Déploiement
 

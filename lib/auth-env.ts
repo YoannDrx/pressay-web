@@ -1,6 +1,6 @@
 const DEFAULT_APP_URL = "https://press-say.app";
 
-export type IdentityProvider = "better-auth" | "clerk" | "disabled";
+export type IdentityProvider = "better-auth" | "disabled";
 
 export function betterAuthURL(): string {
   return (process.env.BETTER_AUTH_URL || DEFAULT_APP_URL).replace(/\/+$/, "");
@@ -24,24 +24,12 @@ export function appleAuthIsConfigured(): boolean {
   );
 }
 
-export function clerkIsConfigured(): boolean {
-  return Boolean(
-    process.env.CLERK_SECRET_KEY &&
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-  );
-}
-
 export function identityProvider(): IdentityProvider {
+  // Better Auth is the only identity provider. AUTH_PROVIDER=disabled keeps an
+  // explicit kill switch; any other value follows the server configuration.
   const requested = process.env.AUTH_PROVIDER?.trim().toLowerCase();
-  if (requested === "better-auth") {
-    return betterAuthIsConfigured() ? "better-auth" : "disabled";
-  }
-  if (requested === "clerk") {
-    return clerkIsConfigured() ? "clerk" : "disabled";
-  }
-  if (betterAuthIsConfigured()) return "better-auth";
-  if (clerkIsConfigured()) return "clerk";
-  return "disabled";
+  if (requested === "disabled") return "disabled";
+  return betterAuthIsConfigured() ? "better-auth" : "disabled";
 }
 
 export function trustedAuthOrigins(): string[] {
