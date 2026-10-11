@@ -2,11 +2,14 @@
 import { SessionNavigation } from "@/components/session-navigation";
 import type { Locale } from "@/lib/content";
 import { copy } from "@/lib/content";
+import { headers } from "next/headers";
 import { identityProvider } from "@/lib/auth-env";
+import { localizedPath } from "@/lib/locale-path";
 
-export function SiteHeader({ locale }: { locale: Locale }) {
+export async function SiteHeader({ locale }: { locale: Locale }) {
   const nav = copy[locale].nav;
   const alternate = locale === "fr" ? "en" : "fr";
+  const currentPath = (await headers()).get("x-pressay-path") ?? `/${locale}`;
   const identityEnabled = identityProvider() !== "disabled";
   return (
     <header className="site-header">
@@ -31,14 +34,14 @@ export function SiteHeader({ locale }: { locale: Locale }) {
         >
           <a
             className={locale === "fr" ? "active" : ""}
-            href="/fr"
+            href={localizedPath(currentPath, "fr")}
             hrefLang="fr"
           >
             FR
           </a>
           <a
             className={locale === "en" ? "active" : ""}
-            href="/en"
+            href={localizedPath(currentPath, "en")}
             hrefLang="en"
           >
             EN
@@ -64,7 +67,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
                 {locale === "fr" ? "Mon compte" : "My account"}
               </a>
             ) : null}
-            <a href={`/${alternate}`} hrefLang={alternate}>
+            <a href={localizedPath(currentPath, alternate)} hrefLang={alternate}>
               {alternate.toUpperCase()}
             </a>
             <a className="button button-primary" href={`/${locale}/download`}>
