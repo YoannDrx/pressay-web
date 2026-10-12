@@ -1,9 +1,11 @@
+import { headers } from "next/headers";
 import type { Locale } from "@/lib/content";
 import type { PublicProcessingRoute } from "@/lib/public-release-capabilities";
 import { processingRouteContent } from "@/lib/processing-route-content";
 
-export function ProcessingRoutes({ locale, enabledRoutes }: { locale: Locale; enabledRoutes: PublicProcessingRoute[] }) {
+export async function ProcessingRoutes({ locale, enabledRoutes }: { locale: Locale; enabledRoutes: PublicProcessingRoute[] }) {
   const fr = locale === "fr";
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const visibleRoutes = (enabledRoutes.length ? enabledRoutes : ["local"] as PublicProcessingRoute[])
     .map((id) => [id, processingRouteContent[id]] as const);
   const initialRoute = visibleRoutes[0];
@@ -31,7 +33,7 @@ export function ProcessingRoutes({ locale, enabledRoutes }: { locale: Locale; en
         </div>
       </div>
     </div>
-    {visibleRoutes.length > 1 ? <script dangerouslySetInnerHTML={{ __html: routeScript(scriptData) }} /> : null}
+    {visibleRoutes.length > 1 ? <script nonce={nonce} dangerouslySetInnerHTML={{ __html: routeScript(scriptData) }} /> : null}
   </section>;
 }
 

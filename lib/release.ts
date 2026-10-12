@@ -25,11 +25,15 @@ export async function getPublicRelease(): Promise<PublicRelease> {
       assets?: Array<{ name: string; browser_download_url: string }>;
     }>;
     if (!Array.isArray(releases)) return fallbackRelease();
-    const release = releases.find((candidate) =>
+    const complete = releases.filter((candidate) =>
       !candidate.draft &&
       candidate.assets?.some((asset) => asset.name === "Pressay.dmg") &&
       candidate.assets?.some((asset) => asset.name === "Pressay.dmg.sha256")
     );
+    // The public download is the newest stable release. A prerelease is only
+    // served while no stable release exists, and is labelled as a beta.
+    const release =
+      complete.find((candidate) => candidate.prerelease !== true) ?? complete[0];
     if (!release) return fallbackRelease();
     const dmg = release.assets?.find((asset) => asset.name === "Pressay.dmg");
     const checksum = release.assets?.find((asset) => asset.name === "Pressay.dmg.sha256");

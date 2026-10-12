@@ -1,0 +1,74 @@
+import type { Metadata } from "next";
+
+export const siteOrigin = "https://press-say.app";
+
+type Locale = "fr" | "en";
+
+const defaults: Record<Locale, { title: string; description: string }> = {
+  fr: {
+    title: "Pressay — Le Voice OS local du Mac",
+    description:
+      "Dictez, transformez et corrigez dans chaque app avec une route de traitement visible et le local par défaut.",
+  },
+  en: {
+    title: "Pressay — The local Voice OS for Mac",
+    description:
+      "Dictate, rewrite and correct in every app, with a visible processing route and local by default.",
+  },
+};
+
+/**
+ * Per-locale metadata for a public page: its own canonical URL, fr/en
+ * alternates (hreflang) and OpenGraph tags in the page language.
+ * `path` is the locale-less path, e.g. "" for home or "/pricing".
+ */
+export function localizedMetadata({
+  locale,
+  path,
+  title,
+  description,
+  index = true,
+}: {
+  locale: Locale;
+  path: string;
+  title?: string;
+  description?: string;
+  index?: boolean;
+}): Metadata {
+  const url = `/${locale}${path}`;
+  const fallback = defaults[locale];
+  const pageDescription = description ?? fallback.description;
+  const ogTitle = title ? `${title} · Pressay` : fallback.title;
+  return {
+    ...(title ? { title } : { title: { absolute: fallback.title } }),
+    description: pageDescription,
+    alternates: {
+      canonical: url,
+      languages: {
+        "fr-FR": `/fr${path}`,
+        "en-US": `/en${path}`,
+        "x-default": `/fr${path}`,
+      },
+    },
+    openGraph: {
+      type: "website",
+      siteName: "Pressay",
+      locale: locale === "fr" ? "fr_FR" : "en_US",
+      alternateLocale: locale === "fr" ? ["en_US"] : ["fr_FR"],
+      url: `${siteOrigin}${url}`,
+      title: ogTitle,
+      description: pageDescription,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: ogTitle,
+      description: pageDescription,
+    },
+    ...(index ? {} : { robots: { index: false, follow: false } }),
+  };
+}
+
+/** Private or transactional pages: never indexed, no canonical claim. */
+export const privateMetadata: Metadata = {
+  robots: { index: false, follow: false },
+};

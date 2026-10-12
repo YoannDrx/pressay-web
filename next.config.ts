@@ -1,22 +1,5 @@
 import type { NextConfig } from "next";
 
-const isDevelopment = process.env.NODE_ENV === "development";
-
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "form-action 'self' https://checkout.stripe.com",
-  "frame-ancestors 'none'",
-  "object-src 'none'",
-  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://*.clerk.accounts.dev https://clerk.press-say.app`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://img.clerk.com",
-  "font-src 'self' data:",
-  "connect-src 'self' https://api.press-say.app https://api-staging.press-say.app https://*.clerk.accounts.dev https://clerk.press-say.app https://accounts.press-say.app",
-  "frame-src 'self' https://*.clerk.accounts.dev https://clerk.press-say.app https://accounts.press-say.app https://checkout.stripe.com",
-  ...(isDevelopment ? [] : ["upgrade-insecure-requests"]),
-].join("; ");
-
 const modelRedirects = [
   {
     source: "/pressay/parakeet-v3/v1/parakeet-tdt-0.6b-v3-Q8_0.gguf",
@@ -66,7 +49,9 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: [
-          { key: "Content-Security-Policy", value: contentSecurityPolicy },
+          // The Content-Security-Policy header is set per request by proxy.ts
+          // because it carries a fresh script nonce.
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },

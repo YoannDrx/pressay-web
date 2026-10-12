@@ -1,5 +1,13 @@
 import http from "node:http";
 let billingError = false;
+let appleSubscription = false;
+let lastToken = null;
+function tokenClaims(header) {
+  const payload = /^Bearer [^.]+\.([^.]+)\./.exec(header ?? "")?.[1];
+  if (!payload) return null;
+  const claims = JSON.parse(Buffer.from(payload, "base64url").toString());
+  return { aud: claims.aud, token_use: claims.token_use };
+}
 const me = {
   accountId: "00000000-0000-4000-8000-000000000001",
   email: "owner@example.test",
@@ -58,7 +66,8 @@ const bodies = {
 };
 http
   .createServer((req, res) => {
-    const path = new URL(req.url, "http://localhost").pathname.replace(
+    const requestURL = new URL(req.url, "http://localhost");
+    const path = requestURL.pathname.replace(
       /^\/v1\//,
       "",
     );
@@ -67,6 +76,17 @@ http
       res.end("ok");
       return;
     }
+    if (path === "/fixture/apple-subscription") {
+      appleSubscription = req.method === "POST";
+      res.end("ok");
+      return;
+    }
+    if (path === "/fixture/last-token") {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(lastToken));
+      return;
+    }
+    if (req.headers.authorization) lastToken = tokenClaims(req.headers.authorization);
     if (path === "/health") {
       res.end("ok");
       return;
@@ -79,6 +99,27 @@ http
         JSON.stringify({
           error: { code: "billing_unavailable" },
           requestId: "fixture-diagnostic",
+        }),
+      );
+      return;
+    }
+    if (
+      path === "me" &&
+      req.method === "DELETE" &&
+      appleSubscription &&
+      requestURL.searchParams.get("acknowledgeAppleSubscription") !== "true"
+    ) {
+      // Contract §3: an active Apple subscription blocks deletion until acknowledged.
+      res.statusCode = 409;
+      res.end(
+        JSON.stringify({
+          error: {
+            code: "apple_subscription_active",
+            message: "An Apple subscription is still active",
+            manageSubscriptionsUrl: "https://apps.apple.com/account/subscriptions",
+            acknowledgeParameter: "acknowledgeAppleSubscription",
+          },
+          requestId: "fixture-apple-subscription",
         }),
       );
       return;

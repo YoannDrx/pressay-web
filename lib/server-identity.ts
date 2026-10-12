@@ -1,6 +1,5 @@
 import "server-only";
 import { cache } from "react";
-import { auth as clerkAuth } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { identityProvider, type IdentityProvider } from "@/lib/auth-env";
@@ -16,7 +15,6 @@ export type WebIdentity = {
   sessionID?: string;
   stepUpAt?: number;
   stepUpMethod?: string;
-  clerkToken?: string;
 };
 
 // Share one session lookup across the layout and account sections in this render.
@@ -39,18 +37,6 @@ export const getWebIdentity = cache(async (): Promise<WebIdentity | null> => {
       sessionID: current.session.id,
       stepUpAt: stepUp?.iat,
       stepUpMethod: stepUp?.method,
-    };
-  }
-  if (provider === "clerk") {
-    const current = await clerkAuth();
-    if (!current.userId) return null;
-    const token = await current.getToken({ template: "pressay-api" });
-    if (!token) return null;
-    return {
-      provider,
-      subject: current.userId,
-      emailVerified: false,
-      clerkToken: token,
     };
   }
   return null;

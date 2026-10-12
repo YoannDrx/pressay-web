@@ -49,21 +49,30 @@ export function SessionNavigation({ locale }: { locale: Locale }) {
   }, [locale]);
   useEffect(() => {
     document.cookie = `pressay_locale=${locale}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+    // Focus and visibility often fire together when switching tabs; each
+    // refresh queries the session store, so collapse them to one per 10 s.
+    let lastAttention = 0;
+    const attention = () => {
+      const now = Date.now();
+      if (now - lastAttention < 10_000) return;
+      lastAttention = now;
+      void refresh();
+    };
     const visible = () => {
-      if (document.visibilityState === "visible") void refresh();
+      if (document.visibilityState === "visible") attention();
     };
     const channel = new BroadcastChannel("pressay-session");
     channel.onmessage = () => void refresh();
     void refresh();
     window.addEventListener("pageshow", refresh);
-    window.addEventListener("focus", refresh);
+    window.addEventListener("focus", attention);
     document.addEventListener("visibilitychange", visible);
     const generation = current;
     return () => {
       generation.current++;
       channel.close();
       window.removeEventListener("pageshow", refresh);
-      window.removeEventListener("focus", refresh);
+      window.removeEventListener("focus", attention);
       document.removeEventListener("visibilitychange", visible);
     };
   }, [locale, refresh]);
@@ -74,6 +83,8 @@ export function SessionNavigation({ locale }: { locale: Locale }) {
       const channel = new BroadcastChannel("pressay-session");
       channel.postMessage("signed-out");
       channel.close();
+      // Full reload so no signed-in view survives in the router cache.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign(`/${locale}`);
     } catch {
       setFailed(true);

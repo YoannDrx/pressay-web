@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LandingPage } from "@/components/landing-page";
+import { localizedMetadata } from "@/lib/page-metadata";
 
-export const metadata: Metadata = { title: "Controlled dictation for macOS", alternates: { canonical: "/en", languages: { "fr-FR": "/fr", "en-US": "/en" } } };
-export default function EnglishHome() { return <LandingPage locale="en" />; }
+export const metadata: Metadata = localizedMetadata({ locale: "en", path: "" });
+export default function Home() { return <LandingPage locale="en" />; }

@@ -18,7 +18,8 @@ export function ImmersiveStory({ locale }: { locale: Locale }) {
     ["04 / ACT", "Text lands. No surprise.", "Pressay verifies the target, inserts, confirms, then returns to idle. Every external route stays opt-in."],
   ];
 
-  return <section className="scroll-story" data-scene="0" data-testid="scroll-story">
+  // LandingEffects updates progress and scene before React hydrates.
+  return <section className="scroll-story" data-scene="0" data-testid="scroll-story" suppressHydrationWarning>
     <div className="story-sticky">
       <div className="story-aurora" aria-hidden="true" />
       <div className="story-grid shell">

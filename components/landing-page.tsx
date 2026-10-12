@@ -249,8 +249,13 @@ export function LandingPage({ locale }: { locale: Locale }) {
                   : "Your voice stays yours. Its shape adapts."}
               </h2>
               <p>{t.modesBody}</p>
+              <p>
+                {fr
+                  ? "Fidèle et Propre restent gratuits et locaux. Les modes de réécriture passent par Apple Intelligence ou ta clé BYOK et font partie de Pro, comme les modes personnalisés."
+                  : "Faithful and Clean stay free and local. Rewrite modes run through Apple Intelligence or your BYOK key and are part of Pro, like custom modes."}
+              </p>
               <a className="inline-arrow" href={`/${locale}/pricing`}>
-                {fr ? "Découvrir tous les modes" : "Explore every mode"} →
+                {fr ? "Voir ce que Pro inclut" : "See what Pro includes"} →
               </a>
             </div>
             <div
@@ -369,7 +374,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
                 ],
                 [
                   "Pourquoi demander Accessibilité ?",
-                  "L’édition Direct l’utilise pour prouver la cible et y insérer le résultat. Companion reste copy-only dans l’App Store.",
+                  "Pressay l’utilise pour vérifier l’app et le champ cibles, puis y insérer le résultat. Sans cette autorisation, le texte est copié pour que tu le colles toi-même.",
                 ],
                 [
                   "Que devient mon presse-papiers ?",
@@ -389,7 +394,7 @@ export function LandingPage({ locale }: { locale: Locale }) {
                 ],
                 [
                   "Why does it need Accessibility?",
-                  "The Direct edition uses it to prove the target and insert text. The App Store Companion remains copy-only.",
+                  "Pressay uses it to verify the target app and field, then insert the result. Without it, the text is copied so you can paste it yourself.",
                 ],
                 [
                   "What happens to my clipboard?",
