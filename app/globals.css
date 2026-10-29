@@ -300,3 +300,13 @@ body:has(.immersive-home) .site-header .button-small { min-height:38px; border-r
 .account-deletion-panel p { margin:0; color:#c9c4cd; line-height:1.55; }
 .totp-confirm { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:12px; }
 .totp-confirm input { width:9em; }
+/* Download page: macOS / Windows selector. Without scripting both panels stay readable. */
+.download-tabs { display:inline-flex; gap:4px; margin-bottom:28px; padding:4px; border:1px solid var(--line); border-radius:999px; background:#121116; }
+.download-tabs button { padding:9px 18px; border:0; border-radius:999px; background:transparent; color:#a9a3af; font:inherit; font-size:14px; cursor:pointer; }
+.download-tabs button[aria-selected="true"] { background:var(--paper); color:#0c0b10; }
+.download-tabs button:focus-visible,.download-platforms [role="tabpanel"]:focus-visible { outline:2px solid var(--cobalt); outline-offset:3px; }
+.download-platforms [role="tabpanel"] { scroll-margin-top:110px; }
+@media (scripting:none) { .download-tabs { display:none; }.download-platforms [role="tabpanel"][hidden] { display:block; margin-top:80px; } }
+.download-card .download-soon { margin-top:12px; color:var(--paper); font-size:18px; }
+.download-checksums { margin:14px 0 0; font-size:13px; }.download-checksums a { text-decoration:underline; text-underline-offset:3px; }
+.hero-windows-link { text-decoration:underline; text-underline-offset:3px; }
