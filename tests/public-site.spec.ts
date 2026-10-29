@@ -321,6 +321,9 @@ test("download page exposes the public release channel and checksum", async ({
   page,
 }) => {
   await page.goto("/fr/download");
+  // Playwright's desktop profile reports a Windows user agent, which
+  // preselects the Windows tab; the release checks below are the Mac's.
+  await page.getByRole("tab", { name: "macOS" }).click();
   const version = page.locator("#macos .download-card h2");
   await expect(version).toHaveText(/^v\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?$/);
   const tag = await version.innerText();
