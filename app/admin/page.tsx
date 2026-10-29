@@ -11,6 +11,8 @@ type Overview = {
   failed_webhooks: number;
   cloud_seconds: number;
   cloud_transformations: number;
+  downloads_7d?: number;
+  downloads_30d?: number;
   subscriptions: {
     provider: string;
     billing_interval: string;
@@ -40,6 +42,10 @@ export default async function Page() {
                 `${(d.catalogueMRRMinor / 100).toFixed(2)} €`,
               ],
               ["Crédits attribués", `${(d.credits_minor / 100).toFixed(2)} €`],
+              [
+                "Téléchargements 7 j · 30 j",
+                `${d.downloads_7d ?? 0} · ${d.downloads_30d ?? 0}`,
+              ],
               [
                 "Cloud ce mois",
                 `${Math.ceil(d.cloud_seconds / 60)} min · ${d.cloud_transformations} transformations`,
