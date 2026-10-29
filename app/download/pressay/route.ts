@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { after } from "next/server";
+import {
+  downloadLabel,
+  reportDownload,
+  type DownloadEvent,
+} from "@/lib/download-event";
 import { getPublicRelease } from "@/lib/release";
 /**
  * Next answers HEAD with this GET handler, and router prefetches or RSC
@@ -17,14 +22,18 @@ function isRealDownload(request: Request): boolean {
 }
 export async function GET(request: Request) {
   const release = await getPublicRelease();
-  const anonymousID = randomUUID();
-  const apiURL = process.env.PRESSAY_API_URL?.replace(/\/+$/, "");
-  if (apiURL && isRealDownload(request)) {
-    const base = apiURL.endsWith("/v1") ? apiURL : `${apiURL}/v1`;
-    const sourceURL = new URL(request.url);
-    after(async () => {
-      await fetch(`${base}/downloads`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ anonymousID, assetType: "dmg", appVersion: release.tag.replace(/^v/, ""), source: sourceURL.searchParams.get("utm_source") ?? "website", campaign: sourceURL.searchParams.get("utm_campaign") ?? undefined, referralCode: sourceURL.searchParams.get("ref") ?? undefined }), cache: "no-store" }).catch(() => undefined);
-    });
+  if (isRealDownload(request)) {
+    const params = new URL(request.url).searchParams;
+    const event: DownloadEvent = {
+      anonymousID: randomUUID(),
+      platform: "macos",
+      assetType: "dmg",
+      appVersion: release.tag.replace(/^v/, ""),
+      source: downloadLabel(params.get("utm_source")) ?? "website",
+      campaign: downloadLabel(params.get("utm_campaign")),
+      referralCode: downloadLabel(params.get("ref")),
+    };
+    after(() => reportDownload(event));
   }
   return Response.redirect(release.dmgURL, 307);
 }
