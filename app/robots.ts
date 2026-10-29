@@ -13,6 +13,7 @@ export default function robots(): MetadataRoute.Robots {
         "/auth/",
         "/checkout/",
         "/download/pressay",
+        "/download/windows",
         "/oauth/",
         "/sign-in",
         "/sign-up",

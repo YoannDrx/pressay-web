@@ -8,11 +8,14 @@ import { SiteHeader } from "@/components/site-header";
 import type { Locale } from "@/lib/content";
 import { copy } from "@/lib/content";
 import { publicReleaseCapabilities } from "@/lib/public-release-capabilities";
+import { getWindowsRelease } from "@/lib/release";
 
-export function LandingPage({ locale }: { locale: Locale }) {
+export async function LandingPage({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const fr = locale === "fr";
   const release = publicReleaseCapabilities();
+  // Windows is only mentioned as available once a release ships its installers.
+  const windowsAvailable = (await getWindowsRelease()) !== null;
   const remoteRoutesPublished =
     release.byokValidated || release.pressayCloudValidated;
   const localProof = fr
@@ -79,7 +82,9 @@ export function LandingPage({ locale }: { locale: Locale }) {
             "@type": "SoftwareApplication",
             name: "Pressay",
             applicationCategory: "ProductivityApplication",
-            operatingSystem: "macOS 14 or later",
+            operatingSystem: windowsAvailable
+              ? "macOS 14 or later, Windows 10, Windows 11"
+              : "macOS 14 or later",
             url: `https://press-say.app/${locale}`,
             downloadUrl: "https://press-say.app/download/pressay",
             offers,
@@ -133,6 +138,18 @@ export function LandingPage({ locale }: { locale: Locale }) {
             <small>
               macOS 14+ · Apple Silicon ·{" "}
               {fr ? "Free sans compte" : "Free without an account"}
+              {windowsAvailable ? (
+                <>
+                  {" "}
+                  ·{" "}
+                  <a
+                    className="hero-windows-link"
+                    href={`/${locale}/download#windows`}
+                  >
+                    {fr ? "Aussi sur Windows" : "Also on Windows"}
+                  </a>
+                </>
+              ) : null}
             </small>
           </div>
           <div className="hero-voice" aria-hidden="true">
@@ -384,6 +401,18 @@ export function LandingPage({ locale }: { locale: Locale }) {
                   "Le Cloud est-il obligatoire ?",
                   "Non. La dictée locale fonctionne hors ligne, sans compte et sans quota.",
                 ],
+                [
+                  "Pressay marche-t-il sur Windows ?",
+                  windowsAvailable
+                    ? "Oui, sur Windows 10 22H2 ou Windows 11, avec un PC x64 ou ARM (Snapdragon)."
+                    : "Bientôt. Pressay pour Windows arrive bientôt ; la version actuelle tourne sur macOS 14+ avec Apple Silicon.",
+                ],
+                [
+                  "Mon abonnement couvre-t-il Mac et PC ?",
+                  windowsAvailable
+                    ? "Oui. Un seul compte couvre jusqu’à 3 appareils au total, Mac et PC confondus."
+                    : "Oui. Un seul compte couvrira jusqu’à 3 appareils au total, Mac et PC confondus, dès que la version Windows sera disponible.",
+                ],
               ]
             : [
                 [
@@ -403,6 +432,18 @@ export function LandingPage({ locale }: { locale: Locale }) {
                 [
                   "Is Cloud required?",
                   "No. Local dictation works offline, without an account or quota.",
+                ],
+                [
+                  "Does Pressay work on Windows?",
+                  windowsAvailable
+                    ? "Yes, on Windows 10 22H2 or Windows 11, with an x64 or ARM (Snapdragon) PC."
+                    : "Soon. Pressay for Windows is coming soon; the current version runs on macOS 14+ with Apple Silicon.",
+                ],
+                [
+                  "Does my subscription cover both Mac and PC?",
+                  windowsAvailable
+                    ? "Yes. One account covers up to 3 devices in total, Macs and PCs combined."
+                    : "Yes. One account will cover up to 3 devices in total, Macs and PCs combined, as soon as the Windows version is available.",
                 ],
               ]
           ).map(([question, answer]) => (

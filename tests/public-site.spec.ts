@@ -321,7 +321,10 @@ test("download page exposes the public release channel and checksum", async ({
   page,
 }) => {
   await page.goto("/fr/download");
-  const version = page.locator(".download-card h2");
+  // Playwright's desktop profile reports a Windows user agent, which
+  // preselects the Windows tab; the release checks below are the Mac's.
+  await page.getByRole("tab", { name: "macOS" }).click();
+  const version = page.locator("#macos .download-card h2");
   await expect(version).toHaveText(/^v\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?$/);
   const tag = await version.innerText();
   await expect(
@@ -336,6 +339,7 @@ test("download page exposes the public release channel and checksum", async ({
     "href",
     /Pressay\.dmg\.sha256$/,
   );
+  await expect(page.getByRole("tab", { name: "Windows" })).toBeVisible();
 });
 
 test("commercial UI fails closed before identity and Stripe are configured", async ({

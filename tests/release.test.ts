@@ -1,6 +1,6 @@
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getPublicRelease } from '../lib/release.ts';
+import { getPublicRelease, getWindowsRelease } from '../lib/release.ts';
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
 for (const [name, replacement] of [
@@ -50,4 +50,49 @@ test('serves the latest prerelease, flagged as beta, when no stable exists', asy
   const release = await getPublicRelease();
   assert.equal(release.tag, 'v2.0.0-rc.1');
   assert.equal(release.prerelease, true);
+});
+const windowsAssets = (tag: string) => ['x64', 'arm64'].flatMap((arch) => [
+  { name: `Pressay-windows-${arch}.exe`, browser_download_url: `https://github.com/YoannDrx/pressay/releases/download/${tag}/Pressay-windows-${arch}.exe` },
+  { name: `Pressay-windows-${arch}.exe.sha256`, browser_download_url: `https://github.com/YoannDrx/pressay/releases/download/${tag}/Pressay-windows-${arch}.exe.sha256` },
+]);
+test('reports no Windows release while no release ships the installers', async () => {
+  globalThis.fetch = async () => Response.json([
+    { tag_name: 'v2.0.0', prerelease: false, assets: asset('v2.0.0') },
+    { tag_name: 'v1.9.0', prerelease: false, assets: [...asset('v1.9.0'), windowsAssets('v1.9.0')[0]] },
+  ]);
+  assert.equal(await getWindowsRelease(), null);
+});
+test('reports no Windows release when GitHub is unavailable', async () => {
+  globalThis.fetch = async () => new Response('', { status: 503 });
+  assert.equal(await getWindowsRelease(), null);
+});
+test('returns the x64 and ARM64 installers of a complete Windows release', async () => {
+  globalThis.fetch = async () => Response.json([
+    { tag_name: 'v2.1.0', prerelease: false, assets: [...asset('v2.1.0'), ...windowsAssets('v2.1.0')] },
+  ]);
+  const release = await getWindowsRelease();
+  assert.equal(release?.tag, 'v2.1.0');
+  assert.equal(release?.prerelease, false);
+  assert.ok(release?.x64.exeURL.endsWith('/v2.1.0/Pressay-windows-x64.exe'));
+  assert.ok(release?.x64.checksumURL.endsWith('/v2.1.0/Pressay-windows-x64.exe.sha256'));
+  assert.ok(release?.arm64.exeURL.endsWith('/v2.1.0/Pressay-windows-arm64.exe'));
+  assert.ok(release?.arm64.checksumURL.endsWith('/v2.1.0/Pressay-windows-arm64.exe.sha256'));
+});
+test('ignores draft Windows releases', async () => {
+  globalThis.fetch = async () => Response.json([
+    { tag_name: 'v2.2.0', draft: true, prerelease: false, assets: windowsAssets('v2.2.0') },
+    { tag_name: 'v2.1.0-beta.1', prerelease: true, assets: windowsAssets('v2.1.0-beta.1') },
+  ]);
+  const release = await getWindowsRelease();
+  assert.equal(release?.tag, 'v2.1.0-beta.1');
+  assert.equal(release?.prerelease, true);
+});
+test('prefers the latest stable Windows release over a newer prerelease', async () => {
+  globalThis.fetch = async () => Response.json([
+    { tag_name: 'v2.2.0-beta.1', prerelease: true, assets: windowsAssets('v2.2.0-beta.1') },
+    { tag_name: 'v2.1.0', prerelease: false, assets: windowsAssets('v2.1.0') },
+  ]);
+  const release = await getWindowsRelease();
+  assert.equal(release?.tag, 'v2.1.0');
+  assert.equal(release?.prerelease, false);
 });
