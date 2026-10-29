@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { STEP_UP_REQUIRED_EVENT } from "@/lib/step-up-event";
 
 export function AdminStepUp({
   initialExpiresAt = 0,
@@ -17,6 +18,19 @@ export function AdminStepUp({
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
+  }, []);
+  const panelRef = useRef<HTMLDetailsElement>(null);
+  const codeRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    function open() {
+      const panel = panelRef.current;
+      if (!panel) return;
+      panel.open = true;
+      panel.scrollIntoView({ block: "center", behavior: "smooth" });
+      codeRef.current?.focus({ preventScroll: true });
+    }
+    window.addEventListener(STEP_UP_REQUIRED_EVENT, open);
+    return () => window.removeEventListener(STEP_UP_REQUIRED_EVENT, open);
   }, []);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
@@ -60,7 +74,7 @@ export function AdminStepUp({
           ? `✓ Actions sensibles autorisées · ${Math.ceil((expiresAt - now) / 60000)} min restantes`
           : "Actions sensibles verrouillées · code requis"}
       </p>
-      <details>
+      <details ref={panelRef}>
         <summary>
           {active
             ? "Renouveler la validation"
@@ -82,6 +96,7 @@ export function AdminStepUp({
           <label>
             Validation forte
             <input
+              ref={codeRef}
               name="code"
               autoComplete="one-time-code"
               placeholder="123 456"
