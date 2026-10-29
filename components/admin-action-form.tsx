@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { STEP_UP_REQUIRED_EVENT } from "@/lib/step-up-event";
 
 type Field = {
   name: string;
@@ -75,10 +76,19 @@ export function AdminActionForm({
       } | null;
       setPending(false);
       if (!response.ok) {
+        const stepUpRequired =
+          typeof result?.error !== "string" &&
+          result?.error?.code === "step_up_required";
+        // Open the security panel on the code field instead of asking the
+        // owner to find it; the form keeps its values for the retry.
+        if (stepUpRequired)
+          window.dispatchEvent(new Event(STEP_UP_REQUIRED_EVENT));
         setMessage(
           typeof result?.error === "string"
             ? result.error
-            : `${result?.error?.code === "step_up_required" ? "Valide ton code TOTP dans le panneau de sécurité, puis réessaie." : (result?.error?.message ?? `Erreur ${response.status}`)}`,
+            : stepUpRequired
+              ? "Saisis ton code Authenticator dans le panneau ouvert, puis réessaie."
+              : (result?.error?.message ?? `Erreur ${response.status}`),
         );
         return;
       }
