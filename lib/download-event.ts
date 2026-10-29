@@ -28,9 +28,14 @@ export async function reportDownload(event: DownloadEvent): Promise<void> {
   if (!apiURL || identityProvider() !== "better-auth") return;
   const base = apiURL.endsWith("/v1") ? apiURL : `${apiURL}/v1`;
   try {
+    // Better Auth only sets iat when the payload carries it, and the Cloud
+    // bounds the token age from iat.
+    const now = Math.floor(Date.now() / 1000);
     const { token } = await auth.api.signJWT({
       body: {
         payload: {
+          iat: now,
+          exp: now + 300,
           sub: "press-say.app",
           token_use: "pressay_download_event",
           aud: "pressay-download-event",
