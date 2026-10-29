@@ -21,6 +21,28 @@ const modelRedirects = [
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  async rewrites() {
+    const updatesHost = [
+      { type: "host" as const, value: "updates.press-say.app" },
+    ];
+    return {
+      beforeFiles: [
+        // Endpoint baked into every public beta.
+        {
+          source: "/latest.json",
+          has: updatesHost,
+          destination: "/updates/latest.json",
+        },
+        {
+          source: "/:target/:arch/:version",
+          has: updatesHost,
+          destination: "/updates/:target/:arch/:version",
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   async redirects() {
     return [
       {
@@ -36,6 +58,12 @@ const nextConfig: NextConfig = {
         destination,
         permanent: false,
       })),
+      {
+        source: "/",
+        has: [{ type: "host", value: "updates.press-say.app" }],
+        destination: "https://press-say.app/",
+        permanent: false,
+      },
       {
         source: "/:path*",
         has: [{ type: "host", value: "www.press-say.app" }],
