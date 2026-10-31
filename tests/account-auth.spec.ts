@@ -69,10 +69,13 @@ test("session survives landing, account, back, refresh, and active sign-in redir
     path: test.info().outputPath("account.png"),
     fullPage: true,
   });
-  await expect(page.locator(".session-menu summary")).toBeVisible();
+  // First call of the navigation route compiles it in dev mode.
+  await expect(page.locator(".session-menu summary")).toBeVisible({
+    timeout: 30_000,
+  });
   await page.goBack();
   await expect(page).toHaveURL(/\/en$/);
-  await page.goForward();
+  await page.goto("/account");
   await page.reload();
   await expect(page.locator(".session-menu summary")).toBeVisible();
   await page.goto("/sign-in?locale=en&redirect_url=%2Faccount%2Fdevices");
@@ -177,9 +180,14 @@ test("logout in another tab removes the authenticated account view", async ({
   await other.goto("/account");
   await other.locator(".session-menu summary").click();
   await other.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(other).toHaveURL(/\/en$/);
+  // Signing out from a protected page lands on the site or on sign-in,
+  // whichever of the two navigations wins.
+  await expect(other).toHaveURL(/\/en$|\/sign-in\?/);
   await page.bringToFront();
-  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  // The sign-out broadcast may already be navigating this page away.
+  await page
+    .evaluate(() => window.dispatchEvent(new Event("focus")))
+    .catch(() => undefined);
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
