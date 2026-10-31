@@ -28,6 +28,20 @@ Les modifications n'ouvrent ni les ventes ni le programme de parrainage.
   qu'à la création ; la révocation du code et le retrait d'un accès accordé sont
   deux actions distinctes. L'utilisation des promotions est consultable dans Stripe
   depuis la liste des campagnes, avec date de contrôle et sans révéler le code.
+- Fiche client (31 octobre 2026) : la recherche reconnaît e-mail, identifiant de
+  compte, d'appareil ou d'identité, `cus_…`, `sub_…` et transaction Apple
+  d'origine. La fiche réunit identifiants Stripe (lien vers le tableau de bord du
+  mode de l'API) et Apple, abonnements complets, paiements, remboursements et
+  litiges, consentements, suppression en cours, tous les appareils, usage Cloud
+  sur 12 mois et audit du compte. Les méthodes de connexion, passkeys, code
+  Authenticator et sessions sont lus dans la base du site (`lib/admin-identity.ts`)
+  seulement après la réponse du Cloud, qui vérifie le rôle et le second facteur
+  et journalise la lecture ; ni jeton, ni secret, ni adresse IP ne sont affichés.
+  Le Sandbox Apple est présenté à part du Pro payant.
+- `/account` : plateforme de chaque appareil (« x / 3 appareils »), offre
+  mensuelle ou annuelle, appel à régulariser un paiement en échec (Stripe ou
+  Apple) et export JSON des données Cloud (`POST /api/account/export`, même
+  origine et session exigées).
 - Cartes Free/Pro centrées, logo dans le footer et le compte, accroche FR/EN :
   « Là où tu peux écrire, tu peux parler. » / “Wherever you can type, you can speak.”
 

@@ -13,6 +13,7 @@ type Overview = {
   cloud_transformations: number;
   downloads_7d?: number;
   downloads_30d?: number;
+  plans?: { plan: string; count: number }[];
   subscriptions: {
     provider: string;
     billing_interval: string;
@@ -57,6 +58,22 @@ export default async function Page() {
               </article>
             ))}
           </section>
+          {d.plans ? (
+            <>
+              <h2>Comptes actifs par offre</h2>
+              <AdminTable
+                headers={["Offre", "Comptes"]}
+                rows={d.plans.map((p) => [
+                  p.plan === "sandbox"
+                    ? "Sandbox Apple (non payé)"
+                    : p.plan === "pro"
+                      ? "Pro (payant ou offert)"
+                      : "Free",
+                  p.count,
+                ])}
+              />
+            </>
+          ) : null}
           <h2>Abonnements payants actifs</h2>
           <AdminTable
             headers={["Fournisseur", "Périodicité", "Abonnements"]}

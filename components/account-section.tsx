@@ -10,11 +10,13 @@ import {
   type Resource,
 } from "@/lib/account-data";
 import {
+  AccountExport,
   AccountMutation,
   AccessCodeForm,
   ReferralLink,
 } from "./account-controls";
 import { AccountDeletion } from "./account-deletion";
+import { paymentNeedsAction, platformLabel } from "@/lib/admin-format";
 import { AccountSecurity } from "./account-security";
 import { ReferralAttributor } from "./account-actions";
 export async function AccountSection({
@@ -45,6 +47,7 @@ export async function AccountSection({
           <Link href={`/${locale}/privacy`}>
             {fr ? "Politique de confidentialité" : "Privacy policy"}
           </Link>
+          <AccountExport locale={locale} />
           <AccountDeletion locale={locale} />
         </section>
       </>
@@ -57,13 +60,14 @@ export async function AccountSection({
         {r.data ? (
           <article className="account-card">
             <p>
-              {r.data.devices.length} / {r.data.limit} Mac
+              {r.data.devices.length} / {r.data.limit}{" "}
+              {fr ? "appareils" : "devices"}
             </p>
             {!r.data.devices.length ? (
               <p>
                 {fr
-                  ? "Connecte Pressay sur ton Mac pour le retrouver ici. La connexion au site ne consomme pas de place."
-                  : "Sign in to Pressay on your Mac to see it here. Website sign-in does not use a device slot."}
+                  ? "Connecte Pressay sur ton Mac ou ton PC Windows pour le retrouver ici. La connexion au site ne consomme pas de place."
+                  : "Sign in to Pressay on your Mac or Windows PC to see it here. Website sign-in does not use a device slot."}
               </p>
             ) : null}
             <div className="account-device-list">
@@ -72,13 +76,9 @@ export async function AccountSection({
                   <div>
                     <strong>{d.displayName}</strong>
                     <small>
+                      {deviceLabel(d.platform, d.appVariant, fr)} ·{" "}
                       {d.appVersion} ·{" "}
-                      {d.appVariant === "mas"
-                        ? "Mac App Store"
-                        : fr
-                          ? "Version directe"
-                          : "Direct download"}{" "}
-                      · {fr ? "Dernier contact" : "Last contact"}{" "}
+                      {fr ? "Dernier contact" : "Last contact"}{" "}
                       {date(d.lastSeenAt)}
                     </small>
                   </div>
@@ -89,8 +89,8 @@ export async function AccountSection({
                     label={fr ? "Révoquer" : "Revoke"}
                     confirm={
                       fr
-                        ? "Révoquer l’accès Cloud de ce Mac ?"
-                        : "Revoke this Mac’s Cloud access?"
+                        ? "Révoquer l’accès Cloud de cet appareil ?"
+                        : "Revoke this device’s Cloud access?"
                     }
                   />
                 </div>
@@ -203,6 +203,46 @@ export async function AccountSection({
           )}
           {billing.data ? (
             <>
+              {paymentNeedsAction(billing.data.status) ? (
+                <div className="account-alert" role="alert">
+                  <p>
+                    {billing.data.provider === "app_store"
+                      ? fr
+                        ? "Apple n’a pas pu renouveler ton abonnement. Mets à jour ton moyen de paiement chez Apple pour garder Pro."
+                        : "Apple could not renew your subscription. Update your payment method with Apple to keep Pro."
+                      : fr
+                        ? "Ton dernier paiement a échoué. Mets à jour ton moyen de paiement pour garder Pro."
+                        : "Your last payment failed. Update your payment method to keep Pro."}
+                  </p>
+                  {billing.data.provider === "stripe" ? (
+                    <AccountMutation
+                      endpoint="/api/portal"
+                      locale={locale}
+                      label={
+                        fr ? "Régulariser le paiement" : "Fix my payment"
+                      }
+                    />
+                  ) : (
+                    <a
+                      className="button"
+                      href="https://apps.apple.com/account/subscriptions"
+                    >
+                      {fr ? "Régulariser chez Apple" : "Fix payment with Apple"}
+                    </a>
+                  )}
+                </div>
+              ) : null}
+              {billing.data.interval ? (
+                <p>
+                  {billing.data.interval === "year"
+                    ? fr
+                      ? "Offre annuelle"
+                      : "Annual plan"
+                    : fr
+                      ? "Offre mensuelle"
+                      : "Monthly plan"}
+                </p>
+              ) : null}
               <p>
                 {billing.data.cancelAtPeriodEnd
                   ? fr
@@ -263,7 +303,7 @@ export async function AccountSection({
       </section>
       <div className="account-section-links">
         <Link className="button" href="/account/devices">
-          {fr ? "Mes Mac" : "My Macs"}
+          {fr ? "Mes appareils" : "My devices"}
         </Link>
         <Link className="button" href="/account/referrals">
           {fr ? "Invitations et parrainage" : "Invitations and referrals"}
@@ -329,12 +369,22 @@ function sourceLabel(source: string, fr: boolean) {
       : "Free local dictation, without an account or network.")
   );
 }
+function deviceLabel(
+  platform: string | undefined,
+  variant: string,
+  fr: boolean,
+) {
+  if (platform === "windows") return "Windows";
+  if (variant === "mas") return "Mac App Store";
+  return `${platformLabel(platform)} · ${fr ? "version directe" : "direct download"}`;
+}
 function statusLabel(status: string | null, fr: boolean) {
   return (
     (
       {
         active: fr ? "Actif" : "Active",
         past_due: fr ? "Paiement à régulariser" : "Payment overdue",
+        grace: fr ? "Paiement à régulariser chez Apple" : "Payment issue with Apple",
         canceled: fr ? "Résilié" : "Cancelled",
         expired: fr ? "Expiré" : "Expired",
         refunded: fr ? "Remboursé" : "Refunded",

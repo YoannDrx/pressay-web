@@ -51,6 +51,7 @@ export type Usage = {
 };
 export type Billing = {
   provider: "stripe" | "app_store" | null;
+  interval?: "month" | "year" | null;
   status: string | null;
   currentPeriodEndsAt: string | null;
   cancelAtPeriodEnd?: boolean;
@@ -60,6 +61,7 @@ export type Devices = {
   devices: {
     id: string;
     displayName: string;
+    platform?: "macos" | "windows";
     appVersion: string;
     appVariant: string;
     lastSeenAt: string;
