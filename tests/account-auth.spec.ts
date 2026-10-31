@@ -437,7 +437,9 @@ test("owners manage members and roles; support and read-only see their role with
   page.on("dialog", (dialog) => void dialog.accept());
   try {
     await page.goto("/admin");
-    await expect(page.locator(".admin-role")).toHaveText("Rôle : Propriétaire");
+    await expect(page.locator(".admin-role")).toHaveText("Rôle : Propriétaire", {
+      timeout: 30_000,
+    });
     await page.locator(".admin-sidebar").getByRole("link", { name: "Membres" }).click();
     await expect(page).toHaveURL(/\/admin\/team$/);
     const owner = page.getByRole("row", { name: /^owner@example\.test/ });
@@ -454,7 +456,10 @@ test("owners manage members and roles; support and read-only see their role with
     await add.getByLabel("Rôle").selectOption("readonly");
     await add.getByLabel("Motif").fill("Nouvel analyste");
     await add.getByRole("button", { name: "Ajouter" }).click();
-    await expect(add.getByRole("status")).toHaveText("Action effectuée et auditée.");
+    // The proxy route compiles on first use in development.
+    await expect(add.getByRole("status")).toHaveText("Action effectuée et auditée.", {
+      timeout: 30_000,
+    });
     const change = helper.getByRole("form", { name: "Changer le rôle" });
     await change.getByLabel("Nouveau rôle").selectOption("owner");
     await change.getByLabel("Motif").fill("Associée");
