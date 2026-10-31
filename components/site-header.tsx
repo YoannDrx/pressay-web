@@ -1,5 +1,4 @@
 /* eslint-disable @next/next/no-html-link-for-pages -- Public marketing navigation intentionally uses full document links so route prefetch cannot compete with the landing LCP. */
-import { SessionNavigation } from "@/components/session-navigation";
 import type { Locale } from "@/lib/content";
 import { copy } from "@/lib/content";
 import { headers } from "next/headers";
@@ -47,7 +46,13 @@ export async function SiteHeader({ locale }: { locale: Locale }) {
             EN
           </a>
         </span>
-        {identityEnabled ? <SessionNavigation locale={locale} /> : null}
+        {/* A plain link keeps public pages free of the auth client and of any
+            session request; /account sends signed-out visitors to sign-in. */}
+        {identityEnabled ? (
+          <a className="text-link" href="/account">
+            {locale === "fr" ? "Mon compte" : "My account"}
+          </a>
+        ) : null}
         <span className="nav-divider" aria-hidden="true" />
         <a className="button button-small" href={`/${locale}/download`}>
           {nav.download}

@@ -174,10 +174,18 @@ test("landing navigation and compatibility marquee are accessible", async ({
   );
   const brandIcons = page.locator(".app-logo-card .brand-icon");
   await expect(brandIcons).toHaveCount(26);
-  await expect(brandIcons.first()).toHaveCSS(
-    "background-image",
-    /data:image\/svg\+xml/,
+  // Logos are cacheable files, not data URIs inflating every landing response.
+  await expect(brandIcons.first()).toHaveAttribute(
+    "src",
+    /^\/brand-icons\/logos-[a-z-]+\.svg$/,
   );
+  await expect
+    .poll(() => brandIcons.first().evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0);
+  const icon = await page.request.get("/brand-icons/logos-slack-icon.svg");
+  expect(icon.status()).toBe(200);
+  expect(icon.headers()["content-type"]).toContain("image/svg+xml");
+  expect((await page.request.get("/brand-icons/logos-unknown.svg")).status()).toBe(404);
   await expect(page.getByRole("link", { name: "GitHub" })).toHaveCount(0);
 });
 
@@ -497,6 +505,9 @@ test("remote staging exposes Better Auth and protects account step-up", async ({
   await expect(page.getByRole("button", { name: /passkey/i })).toBeHidden();
   await page.getByText("Autre méthode", { exact: true }).click();
   await expect(page.getByRole("button", { name: /passkey/i })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "conditions générales d’utilisation et de vente" }),
+  ).toHaveAttribute("href", "/fr/terms");
 });
 
 test("Free and Pro stay centered with equal widths across public pages", async ({
@@ -558,8 +569,24 @@ test("pages declare their language, canonical URL and alternates", async ({
     /\/en\/pricing$/,
   );
   await expect(
-    page.locator('link[rel="alternate"][hreflang="fr-FR"]'),
+    page.locator('link[rel="alternate"][hreflang="fr"]'),
   ).toHaveAttribute("href", /\/fr\/pricing$/);
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="x-default"]'),
+  ).toHaveAttribute("href", /\/fr\/pricing$/);
+  await expect(page).toHaveTitle("Pricing · Pressay");
+  await expect(page.locator('meta[property="og:locale"]')).toHaveAttribute(
+    "content",
+    "en_US",
+  );
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+    "content",
+    "https://press-say.app/en/pricing",
+  );
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    /^Free stays unlimited locally/,
+  );
   await page.goto("/fr/privacy");
   await expect(page.locator("html")).toHaveAttribute("lang", "fr");
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
@@ -609,4 +636,67 @@ test("withdrawal page offers the model withdrawal form", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Model withdrawal form" }),
   ).toBeVisible();
+});
+
+test("public pages make no session or authenticated request", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(new URL(request.url()).pathname));
+  for (const path of ["/fr", "/en", "/fr/pricing", "/en/download", "/fr/terms"]) {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+  }
+  expect(
+    requests.filter((path) => /^\/api\/(account|auth|pressay)\//.test(path)),
+  ).toEqual([]);
+  await expect(page.locator(".session-menu")).toHaveCount(0);
+});
+
+test("locale-less entry points follow the visitor's language once", async ({
+  browser,
+}) => {
+  const english = await browser.newContext({ locale: "en-GB" });
+  const french = await browser.newContext({ locale: "fr-FR" });
+  const german = await browser.newContext({ locale: "de-DE" });
+  try {
+    const englishPage = await english.newPage();
+    await englishPage.goto("/");
+    await expect(englishPage).toHaveURL(/\/en$/);
+    await englishPage.goto("/download");
+    await expect(englishPage).toHaveURL(/\/en\/download$/);
+    // Shared localized links are never redirected...
+    await englishPage.goto("/fr/pricing");
+    await expect(englishPage).toHaveURL(/\/fr\/pricing$/);
+    // ...and the language the visitor then reads is remembered.
+    await englishPage.goto("/");
+    await expect(englishPage).toHaveURL(/\/fr$/);
+
+    const frenchPage = await french.newPage();
+    await frenchPage.goto("/?ref=ABC");
+    await expect(frenchPage).toHaveURL(/\/fr\?ref=ABC$/);
+    await frenchPage.goto("/?locale=en");
+    await expect(frenchPage).toHaveURL(/\/en$/);
+
+    const germanPage = await german.newPage();
+    await germanPage.goto("/");
+    await expect(germanPage).toHaveURL(/\/fr$/);
+  } finally {
+    await Promise.all([english.close(), french.close(), german.close()]);
+  }
+});
+
+test("crawlers get the x-default page whatever their language header", async ({
+  request,
+}) => {
+  const response = await request.get("/", {
+    maxRedirects: 0,
+    headers: {
+      "Accept-Language": "en-US,en;q=0.9",
+      "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    },
+  });
+  expect(response.status()).toBe(307);
+  expect(response.headers()["location"]).toMatch(/\/fr$/);
+  expect(response.headers()["vary"]).toContain("Accept-Language");
 });

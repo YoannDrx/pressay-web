@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { contentSecurityPolicy } from "@/lib/content-security-policy";
 import { isMalformedPath } from "@/lib/request-path";
+import { localeCookie, preferredLocale } from "@/lib/preferred-locale";
+
+// Locale-less entry points and their localized page. Localized URLs such as
+// /fr/pricing are never redirected, so shared links and crawlers keep the
+// language they point to.
+const localeLessEntries: Record<string, string> = { "/": "", "/download": "/download" };
 
 export default function proxy(request: NextRequest) {
   if (isMalformedPath(request.nextUrl.pathname))
@@ -11,6 +17,25 @@ export default function proxy(request: NextRequest) {
         "Cache-Control": "public, max-age=3600",
       },
     });
+  const entry = localeLessEntries[request.nextUrl.pathname];
+  if (entry !== undefined) {
+    const requested = request.nextUrl.searchParams.get("locale");
+    const locale = preferredLocale({
+      cookie:
+        requested === "fr" || requested === "en"
+          ? requested
+          : request.cookies.get(localeCookie)?.value,
+      acceptLanguage: request.headers.get("accept-language"),
+      userAgent: request.headers.get("user-agent"),
+    });
+    const target = request.nextUrl.clone();
+    target.pathname = `/${locale}${entry}`;
+    target.searchParams.delete("locale");
+    const response = NextResponse.redirect(target, 307);
+    response.headers.set("Vary", "Accept-Language, Cookie");
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
+  }
   // A fresh nonce per request lets Next.js mark its own inline bootstrap
   // scripts as trusted, so script-src no longer needs 'unsafe-inline'.
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
@@ -30,7 +55,7 @@ export default function proxy(request: NextRequest) {
     request.nextUrl.pathname.match(/^\/(fr|en)(?:\/|$)/)?.[1] ??
     request.nextUrl.searchParams.get("locale");
   if (locale === "fr" || locale === "en")
-    response.cookies.set("pressay_locale", locale, {
+    response.cookies.set(localeCookie, locale, {
       path: "/",
       sameSite: "lax",
       maxAge: 31536000,
