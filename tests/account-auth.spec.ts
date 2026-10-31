@@ -142,7 +142,22 @@ test("partial billing failure leaves devices and security navigable", async ({
 });
 test("admin routes render real contract fixtures and remain within the mobile viewport", async ({
   page,
+  context,
 }) => {
+  // The administration is French-only, whatever language the visitor chose
+  // for the public site, and visiting it does not change that choice.
+  await context.addCookies([
+    { name: "pressay_locale", value: "en", url: "http://127.0.0.1:31972" },
+  ]);
+  await page.goto("/admin");
+  await expect(page.locator(".admin-sidebar .session-menu summary")).toHaveText(
+    "Mon compte",
+    { timeout: 30_000 },
+  );
+  expect(
+    (await context.cookies()).find((cookie) => cookie.name === "pressay_locale")
+      ?.value,
+  ).toBe("en");
   for (const route of [
     "/admin",
     "/admin/users",
