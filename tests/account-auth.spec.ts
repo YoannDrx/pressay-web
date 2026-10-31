@@ -283,8 +283,10 @@ test("support exports a customer's data for an access request with the site sign
   });
   // Without step-up the export opens the security panel instead.
   await panel.getByRole("button", { name: "Exporter les données (JSON)" }).click();
+  // The export route compiles on first use in development.
   await expect(panel.getByRole("status")).toHaveText(
     "Saisis ton code Authenticator dans le panneau ouvert, puis réessaie.",
+    { timeout: 30_000 },
   );
   const session = await grantStepUp(context);
   await pool.query(
