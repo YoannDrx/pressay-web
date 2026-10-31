@@ -111,7 +111,9 @@ export default async function Page() {
           <p>
             Le MRR est une estimation au tarif catalogue (annuels divisés par
             12), avant promotions, taxes et impayés ; ce n’est pas le revenu
-            encaissé. Apple est exclu de cette estimation. Les crédits
+            encaissé. Apple est exclu de cette estimation : les{" "}
+            <Link href="/admin/metrics">indicateurs</Link> donnent le MRR Stripe et
+            App Store au prix facturé. Les crédits
             promotionnels et les accès offerts sont présentés séparément.
             Webhooks en erreur : {d.failed_webhooks}.
           </p>
