@@ -53,7 +53,8 @@ export async function AccountSection({
       </>
     );
   if (section === "devices") {
-    const r = await accountResource<Devices>("devices");
+    const r = await accountResource<Devices>("devices?include=revoked");
+    const full = r.data ? r.data.devices.length >= r.data.limit : false;
     return (
       <>
         <h1>{fr ? "Tes appareils" : "Your devices"}</h1>
@@ -100,6 +101,52 @@ export async function AccountSection({
         ) : (
           <ResourceError resource={r} locale={locale} />
         )}
+        {r.data?.revokedDevices?.length ? (
+          <article className="account-card">
+            <h2>{fr ? "Appareils révoqués" : "Revoked devices"}</h2>
+            <p>
+              {fr
+                ? "Un appareil révoqué est refusé à la connexion. Réactive-le pour l’utiliser de nouveau avec ce compte."
+                : "A revoked device cannot sign in. Restore it to use it with this account again."}
+              {full
+                ? fr
+                  ? " Tu as déjà 3 appareils actifs : révoque d’abord celui que tu n’utilises plus."
+                  : " You already have 3 active devices: revoke one you no longer use first."
+                : ""}
+            </p>
+            <div className="account-device-list">
+              {r.data.revokedDevices.map((d) => (
+                <div key={d.id}>
+                  <div>
+                    <strong>{d.displayName}</strong>
+                    <small>
+                      {deviceLabel(d.platform, d.appVariant, fr)} ·{" "}
+                      {d.appVersion} · {fr ? "Révoqué le" : "Revoked on"}{" "}
+                      {date(d.revokedAt)}
+                    </small>
+                  </div>
+                  {full ? null : (
+                    <AccountMutation
+                      endpoint={`/api/pressay/devices/${d.id}/restore`}
+                      locale={locale}
+                      label={fr ? "Réactiver" : "Restore"}
+                      confirm={
+                        fr
+                          ? "Réactiver cet appareil ? Il pourra de nouveau se connecter et utiliser le Cloud."
+                          : "Restore this device? It will be able to sign in and use the Cloud again."
+                      }
+                      conflictMessage={
+                        fr
+                          ? "3 appareils sont déjà actifs. Révoque d’abord celui que tu n’utilises plus."
+                          : "3 devices are already active. Revoke one you no longer use first."
+                      }
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </article>
+        ) : null}
       </>
     );
   }

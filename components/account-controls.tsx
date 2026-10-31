@@ -7,12 +7,15 @@ export function AccountMutation({
   label,
   confirm,
   locale = "fr",
+  conflictMessage,
 }: {
   endpoint: string;
   method?: "POST" | "DELETE";
   label: string;
   confirm?: string;
   locale?: "fr" | "en";
+  /** Shown for a 409 refusal, which names a state the user can change. */
+  conflictMessage?: string;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -29,7 +32,11 @@ export function AccountMutation({
       });
       const result = await r.json().catch(() => null);
       if (!r.ok) {
-        setError(mutationError(r.status, locale));
+        setError(
+          r.status === 409 && conflictMessage
+            ? conflictMessage
+            : mutationError(r.status, locale),
+        );
         return;
       }
       if (result?.url) window.location.assign(result.url);

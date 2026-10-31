@@ -21,6 +21,7 @@ export function AdminActionForm({
   submitLabel,
   fields,
   confirmMessage,
+  compact = false,
 }: {
   endpoint: string;
   method?: "POST" | "PATCH" | "DELETE";
@@ -29,6 +30,8 @@ export function AdminActionForm({
   submitLabel: string;
   fields: Field[];
   confirmMessage?: string;
+  /** Table-cell variant: no panel, the title only labels the form. */
+  compact?: boolean;
 }) {
   const router = useRouter();
   const requestKey = useRef<string | null>(null);
@@ -121,11 +124,17 @@ export function AdminActionForm({
   }
 
   return (
-    <form className="admin-action" action={submit}>
-      <div>
-        <h3>{title}</h3>
-        {description ? <p>{description}</p> : null}
-      </div>
+    <form
+      className={compact ? "admin-action admin-action-compact" : "admin-action"}
+      action={submit}
+      aria-label={title}
+    >
+      {compact ? null : (
+        <div>
+          <h3>{title}</h3>
+          {description ? <p>{description}</p> : null}
+        </div>
+      )}
       <div className="admin-form-grid">
         {fields.map((field) =>
           field.type === "hidden" ? (
