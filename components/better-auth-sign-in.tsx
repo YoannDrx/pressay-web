@@ -233,6 +233,34 @@ export function BetterAuthSignIn({
           ? "Session sécurisée, cookies strictement nécessaires uniquement."
           : "Secure session. Strictly necessary cookies only."}
       </small>
+      {/* New tabs keep a pending desktop sign-in on this page. */}
+      <p className="auth-legal">
+        {fr ? (
+          <>
+            En continuant, tu acceptes les{" "}
+            <a href="/fr/terms" target="_blank" rel="noopener">
+              conditions générales d’utilisation et de vente
+            </a>{" "}
+            et tu reconnais avoir lu la{" "}
+            <a href="/fr/privacy" target="_blank" rel="noopener">
+              politique de confidentialité
+            </a>
+            .
+          </>
+        ) : (
+          <>
+            By continuing, you accept the{" "}
+            <a href="/en/terms" target="_blank" rel="noopener">
+              terms of use and sale
+            </a>{" "}
+            and acknowledge the{" "}
+            <a href="/en/privacy" target="_blank" rel="noopener">
+              privacy policy
+            </a>
+            .
+          </>
+        )}
+      </p>
     </div>
   );
 }

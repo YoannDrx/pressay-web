@@ -391,6 +391,20 @@ test("Google sign-in redirects to Google with the exact callback URI and shows e
   await page.waitForTimeout(500);
   expect(authorize).toBeNull();
 
+  // Terms and privacy are one click away before any account is created.
+  await expect(
+    page.getByRole("link", { name: "conditions générales d’utilisation et de vente" }),
+  ).toHaveAttribute("href", "/fr/terms");
+  await expect(
+    page.getByRole("link", { name: "politique de confidentialité" }),
+  ).toHaveAttribute("href", "/fr/privacy");
+  await page.goto("/sign-up?locale=en");
+  await expect(
+    page.getByRole("link", { name: "terms of use and sale" }),
+  ).toHaveAttribute("href", "/en/terms");
+  await expect(
+    page.getByRole("link", { name: "privacy policy" }),
+  ).toHaveAttribute("href", "/en/privacy");
 });
 
 test("TOTP cannot be disabled without a current authenticator code", async ({
