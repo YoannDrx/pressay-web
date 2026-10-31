@@ -71,6 +71,9 @@ async function createInternalAPIToken(
             email_verified: identity.emailVerified,
             name: identity.name,
             sid: identity.sessionID,
+            // Freshness proof: the Cloud refuses account deletion unless the
+            // session signed in (or passed step-up) within ten minutes.
+            pressay_auth_at: identity.signedInAt,
             pressay_step_up_at: identity.stepUpAt,
             pressay_step_up_method: identity.stepUpMethod,
             token_use: "pressay_web_proxy",
@@ -93,6 +96,7 @@ async function createInternalAPIToken(
     email_verified: identity.emailVerified,
     name: identity.name,
     sid: identity.sessionID,
+    pressay_auth_at: identity.signedInAt,
     pressay_step_up_at: identity.stepUpAt,
     pressay_step_up_method: identity.stepUpMethod,
     token_use: "pressay_web_proxy",

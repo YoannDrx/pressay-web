@@ -2,11 +2,27 @@ import http from "node:http";
 let billingError = false;
 let appleSubscription = false;
 let lastToken = null;
-function tokenClaims(header) {
+// Same window as the Cloud's DELETE /v1/me freshness check.
+let deletionMaxAgeSeconds = 600;
+let deletionRequests = 0;
+function decodedClaims(header) {
   const payload = /^Bearer [^.]+\.([^.]+)\./.exec(header ?? "")?.[1];
   if (!payload) return null;
-  const claims = JSON.parse(Buffer.from(payload, "base64url").toString());
-  return { aud: claims.aud, token_use: claims.token_use };
+  return JSON.parse(Buffer.from(payload, "base64url").toString());
+}
+function tokenClaims(header) {
+  const claims = decodedClaims(header);
+  return claims && { aud: claims.aud, token_use: claims.token_use };
+}
+/** Contract: a web session deletes only after a sign-in within the window. */
+function recentlySignedIn(header) {
+  const signedInAt = decodedClaims(header)?.pressay_auth_at;
+  const now = Math.floor(Date.now() / 1000);
+  return (
+    typeof signedInAt === "number" &&
+    signedInAt > now - deletionMaxAgeSeconds &&
+    signedInAt <= now + 30
+  );
 }
 const me = {
   accountId: "00000000-0000-4000-8000-000000000001",
@@ -81,6 +97,16 @@ http
       res.end("ok");
       return;
     }
+    if (path === "/fixture/deletion-max-age") {
+      deletionMaxAgeSeconds = req.method === "POST" ? 0 : 600;
+      res.end("ok");
+      return;
+    }
+    if (path === "/fixture/deletions") {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ count: deletionRequests }));
+      return;
+    }
     if (path === "/fixture/last-token") {
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify(lastToken));
@@ -99,6 +125,25 @@ http
         JSON.stringify({
           error: { code: "billing_unavailable" },
           requestId: "fixture-diagnostic",
+        }),
+      );
+      return;
+    }
+    if (path === "me" && req.method === "DELETE") deletionRequests += 1;
+    if (
+      path === "me" &&
+      req.method === "DELETE" &&
+      !recentlySignedIn(req.headers.authorization)
+    ) {
+      res.statusCode = 403;
+      res.end(
+        JSON.stringify({
+          error: {
+            code: "recent_authentication_required",
+            message: "Sign in again to delete this account",
+            maxAgeSeconds: String(deletionMaxAgeSeconds),
+          },
+          requestId: "fixture-recent-authentication",
         }),
       );
       return;

@@ -3,6 +3,7 @@ import { cache } from "react";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { identityProvider, type IdentityProvider } from "@/lib/auth-env";
+import { sessionSignedInAt } from "@/lib/account-deletion";
 import { readStepUpProof } from "@/lib/step-up";
 import { readSessionWithRetry } from "@/lib/session-read";
 
@@ -13,6 +14,8 @@ export type WebIdentity = {
   emailVerified: boolean;
   name?: string;
   sessionID?: string;
+  /** When this session signed in (seconds since epoch). */
+  signedInAt?: number;
   stepUpAt?: number;
   stepUpMethod?: string;
 };
@@ -35,6 +38,7 @@ export const getWebIdentity = cache(async (): Promise<WebIdentity | null> => {
       emailVerified: current.user.emailVerified === true,
       name: current.user.name,
       sessionID: current.session.id,
+      signedInAt: sessionSignedInAt(current.session.createdAt),
       stepUpAt: stepUp?.iat,
       stepUpMethod: stepUp?.method,
     };

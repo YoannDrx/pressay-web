@@ -324,18 +324,21 @@ test("download page exposes the public release channel and checksum", async ({
   // Playwright's desktop profile reports a Windows user agent, which
   // preselects the Windows tab; the release checks below are the Mac's.
   await page.getByRole("tab", { name: "macOS" }).click();
-  const version = page.locator("#macos .download-card h2");
+  // Scope to the macOS panel: a published Windows release has its own
+  // channel label and checksum links.
+  const macOS = page.locator("#macos");
+  const version = macOS.locator(".download-card h2");
   await expect(version).toHaveText(/^v\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?$/);
   const tag = await version.innerText();
   await expect(
-    page.getByText(tag.includes("-") ? "PUBLIC BETA" : "PUBLIC STABLE"),
+    macOS.getByText(tag.includes("-") ? "PUBLIC BETA" : "PUBLIC STABLE"),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute(
+  await expect(macOS.getByRole("link", { name: /SHA-256/ })).toHaveAttribute(
     "href",
     `https://github.com/YoannDrx/pressay/releases/download/${tag}/Pressay.dmg.sha256`,
   );
-  await expect(page.getByText(/Apple Silicon · arm64/)).toBeVisible();
-  await expect(page.getByRole("link", { name: /SHA-256/ })).toHaveAttribute(
+  await expect(macOS.getByText(/Apple Silicon · arm64/)).toBeVisible();
+  await expect(macOS.getByRole("link", { name: /SHA-256/ })).toHaveAttribute(
     "href",
     /Pressay\.dmg\.sha256$/,
   );

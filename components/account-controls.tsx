@@ -33,9 +33,6 @@ export function AccountMutation({
         return;
       }
       if (result?.url) window.location.assign(result.url);
-      // Full reload after the account itself changed.
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      else if (endpoint.endsWith("/me")) window.location.assign(`/${locale}`);
       else router.refresh();
     } catch {
       setError(
