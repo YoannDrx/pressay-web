@@ -4,6 +4,9 @@ import { AdminActionForm } from "@/components/admin-action-form";
 import { ProviderEventAction } from "@/components/admin-provider-event-action";
 import { adminData, AdminTable, adminDate } from "@/components/admin-data";
 import { readAdminIdentity, type AdminIdentity } from "@/lib/admin-identity";
+import { AdminDownload } from "@/components/admin-download";
+import { adminMessages } from "@/lib/admin-i18n";
+import { customerExportMessages } from "@/lib/admin-messages/customer-export";
 import {
   describeUserAgent,
   money,
@@ -123,6 +126,9 @@ export default async function Page({
                   ["trialing", "active", "grace", "past_due"].includes(s.status),
               )}
             />
+          ) : null}
+          {d.account.status !== "deleted" ? (
+            <AccessRequestExport accountId={d.account.accountId} />
           ) : null}
           <section className="admin-grid-two admin-detail">
             <article className="admin-panel">
@@ -601,6 +607,24 @@ function SupportActions({
           confirmMessage="Supprimer définitivement ce compte ? Cette action ne peut pas être annulée."
         />
       </div>
+    </section>
+  );
+}
+
+/** JSON export of everything held about the account, for an access request. */
+function AccessRequestExport({ accountId }: { accountId: string }) {
+  const t = adminMessages(customerExportMessages);
+  return (
+    <section className="admin-actions-section">
+      <h2>{t.title}</h2>
+      <article className="admin-action">
+        <p>{t.detail}</p>
+        <AdminDownload
+          href={`/api/admin/users/${accountId}/export`}
+          label={t.button}
+          messages={t}
+        />
+      </article>
     </section>
   );
 }
