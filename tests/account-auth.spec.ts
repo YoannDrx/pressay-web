@@ -469,6 +469,123 @@ test("account lists device platforms, asks to fix a failed payment and exports d
   const proxied = await page.request.get("/api/pressay/me/export");
   expect(proxied.status()).toBe(404);
 });
+test("every administrator needs an Authenticator app before the administration opens", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:31973/fixture/require-two-factor");
+  try {
+    await page.goto("/admin");
+    await expect(
+      page.getByRole("heading", { name: "Code Authenticator obligatoire" }),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.getByRole("link", { name: "Configurer l’Authenticator" }),
+    ).toHaveAttribute("href", "/account/security");
+    await expect(page.locator(".admin-sidebar")).toHaveCount(0);
+    await capture(page, "admin-two-factor-gate");
+    // Once the web account has an Authenticator app, the site sends the proof.
+    const cookies = await context.cookies();
+    const token = decodeURIComponent(
+      cookies.find((c) => c.name === "pressay_auth.session_token")!.value,
+    ).split(".")[0];
+    await pool.query(
+      `UPDATE auth_users SET "twoFactorEnabled"=true
+       WHERE id=(SELECT "userId" FROM auth_sessions WHERE token=$1)`,
+      [token],
+    );
+    // Drop the cached session copy so the change is read at once.
+    await context.clearCookies();
+    await context.addCookies(
+      cookies.filter((c) => c.name === "pressay_auth.session_token"),
+    );
+    await page.reload();
+    await expect(page.locator(".admin-role")).toHaveText("Rôle : Propriétaire");
+  } finally {
+    await request.delete("http://127.0.0.1:31973/fixture/require-two-factor");
+  }
+});
+test("owners manage members and roles; support and read-only see their role without the members screen", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.delete("http://127.0.0.1:31973/fixture/support-calls");
+  await grantStepUp(context);
+  page.on("dialog", (dialog) => void dialog.accept());
+  try {
+    await page.goto("/admin");
+    await expect(page.locator(".admin-role")).toHaveText("Rôle : Propriétaire", {
+      timeout: 30_000,
+    });
+    await page.locator(".admin-sidebar").getByRole("link", { name: "Membres" }).click();
+    await expect(page).toHaveURL(/\/admin\/team$/);
+    const owner = page.getByRole("row", { name: /^owner@example\.test/ });
+    await expect(owner).toContainText("toi");
+    await expect(owner).toContainText("Propriétaire");
+    // The fixture user has no Authenticator app on the site.
+    await expect(owner).toContainText("Non configuré : accès bloqué");
+    const helper = page.getByRole("row", { name: /helper@example\.test/ });
+    await expect(helper).toContainText("Support");
+    await expect(helper).toContainText("Inconnu");
+
+    const add = page.getByRole("form", { name: "Ajouter un membre" });
+    await add.getByLabel("Adresse e-mail vérifiée").fill("analyst@example.test");
+    await add.getByLabel("Rôle").selectOption("readonly");
+    await add.getByLabel("Motif").fill("Nouvel analyste");
+    await add.getByRole("button", { name: "Ajouter" }).click();
+    // The proxy route compiles on first use in development.
+    await expect(add.getByRole("status")).toHaveText("Action effectuée et auditée.", {
+      timeout: 30_000,
+    });
+    const change = helper.getByRole("form", { name: "Changer le rôle" });
+    await change.getByLabel("Nouveau rôle").selectOption("owner");
+    await change.getByLabel("Motif").fill("Associée");
+    await change.getByRole("button", { name: "Changer" }).click();
+    await expect(change.getByRole("status")).toHaveText("Action effectuée et auditée.");
+    const remove = helper.getByRole("form", { name: "Retirer" });
+    await remove.getByLabel("Motif").fill("Départ");
+    await remove.getByRole("button", { name: "Retirer" }).click();
+    await expect(remove.getByRole("status")).toHaveText("Action effectuée et auditée.");
+    const calls = await supportCalls(request);
+    expect(calls.map((call) => call.path)).toEqual([
+      "admin/members",
+      "admin/members/00000000-0000-4000-8000-0000000000b2/role",
+      "admin/members/00000000-0000-4000-8000-0000000000b2/remove",
+    ]);
+    expect(calls[0]?.body).toMatchObject({
+      email: "analyst@example.test",
+      role: "readonly",
+      reason: "Nouvel analyste",
+      idempotencyKey: expect.stringMatching(UUID_PATTERN),
+    });
+    expect(calls[1]?.body).toMatchObject({ role: "owner", reason: "Associée" });
+    expect(calls[2]?.body).toMatchObject({ reason: "Départ" });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    ).toBe(true);
+    await capture(page, "admin-team");
+
+    for (const [role, label] of [
+      ["support", "Support"],
+      ["readonly", "Lecture seule"],
+    ] as const) {
+      await request.post("http://127.0.0.1:31973/fixture/admin-role", { data: role });
+      await page.goto("/admin");
+      await expect(page.locator(".admin-role")).toHaveText(`Rôle : ${label}`);
+      await expect(
+        page.locator(".admin-sidebar").getByRole("link", { name: "Membres" }),
+      ).toHaveCount(0);
+      await page.goto("/admin/team");
+      await expect(page.getByText("Cette page est réservée aux propriétaires.")).toBeVisible();
+      await expect(page.getByRole("form", { name: "Ajouter un membre" })).toHaveCount(0);
+    }
+    await capture(page, "admin-team-readonly");
+  } finally {
+    await request.post("http://127.0.0.1:31973/fixture/admin-role", { data: "owner" });
+  }
+});
 test("logout in another tab removes the authenticated account view", async ({
   page,
   context,

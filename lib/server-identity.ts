@@ -18,6 +18,8 @@ export type WebIdentity = {
   signedInAt?: number;
   stepUpAt?: number;
   stepUpMethod?: string;
+  /** The user has an Authenticator app; required for the administration. */
+  twoFactorEnabled?: boolean;
 };
 
 // Share one session lookup across the layout and account sections in this render.
@@ -41,6 +43,9 @@ export const getWebIdentity = cache(async (): Promise<WebIdentity | null> => {
       signedInAt: sessionSignedInAt(current.session.createdAt),
       stepUpAt: stepUp?.iat,
       stepUpMethod: stepUp?.method,
+      twoFactorEnabled:
+        (current.user as { twoFactorEnabled?: boolean | null }).twoFactorEnabled ===
+        true,
     };
   }
   return null;

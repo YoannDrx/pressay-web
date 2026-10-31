@@ -76,6 +76,9 @@ async function createInternalAPIToken(
             pressay_auth_at: identity.signedInAt,
             pressay_step_up_at: identity.stepUpAt,
             pressay_step_up_method: identity.stepUpMethod,
+            // Every administrator needs an Authenticator app; the Cloud
+            // refuses /admin/* without this proof.
+            pressay_two_factor: identity.twoFactorEnabled === true,
             token_use: "pressay_web_proxy",
             // Dedicated audience: a proxy token (which may carry step-up
             // proof) can never be replayed as a Mac API access token.
@@ -99,6 +102,7 @@ async function createInternalAPIToken(
     pressay_auth_at: identity.signedInAt,
     pressay_step_up_at: identity.stepUpAt,
     pressay_step_up_method: identity.stepUpMethod,
+    pressay_two_factor: identity.twoFactorEnabled === true,
     token_use: "pressay_web_proxy",
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })

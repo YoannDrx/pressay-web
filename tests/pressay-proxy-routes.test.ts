@@ -78,6 +78,9 @@ test("the generic proxy relays exactly the routes used by client components", ()
     ["PATCH", `admin/gates/direct/${id}`],
     ["POST", "admin/rewards/process"],
     ["POST", `admin/rewards/${id}/retry`],
+    ["POST", "admin/members"],
+    ["POST", `admin/members/${id}/role`],
+    ["POST", `admin/members/${id}/remove`],
   ];
   for (const [method, path] of relayed)
     assert.deepEqual(
@@ -104,6 +107,11 @@ test("the generic proxy refuses other methods, prefixes and unlisted routes", ()
     ["POST", "admin/billing/events/apple/evt_1/replay"],
     ["GET", "admin/billing/financial-events"],
     ["POST", `admin/devices/${id}/delete`],
+    // The member list is read server-side only.
+    ["GET", "admin/members"],
+    ["DELETE", `admin/members/${id}`],
+    ["PATCH", `admin/members/${id}/role`],
+    ["POST", `admin/members/${id}/delete`],
     ["GET", `admin/users/${id}/grants`],
     ["DELETE", `devices/${id}/restore`],
     ["GET", "entitlements"],
