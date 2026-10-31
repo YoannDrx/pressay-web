@@ -51,6 +51,23 @@ de 10 minutes exigée par Better Auth). Le jeton proxy transmet l’heure de
 connexion de la session (`pressay_auth_at`), que le Cloud revérifie avant
 toute suppression.
 
+## Pages publiques, langue et région
+
+Les pages publiques (`/fr`, `/en`, tarifs, téléchargement, sécurité, pages
+légales) n’initialisent pas le client Better Auth et ne font aucune requête de
+session : l’en-tête pointe simplement vers `/account`, dont la mise en page
+porte le menu de session. Elles restent rendues à la demande, car la CSP exige
+un nonce par requête.
+
+`/` et `/download` redirigent (307) vers la langue du visiteur : cookie
+`pressay_locale` s’il existe (dernière langue choisie ou lue), sinon
+`Accept-Language`, sinon le français (`x-default`). Les robots et aperçus de
+liens reçoivent toujours le français, et les URL localisées (`/fr/...`,
+`/en/...`) ne sont jamais redirigées.
+
+Les fonctions Vercel tournent en `fra1` (`vercel.json`), à côté de Neon
+(`aws-eu-central-1`) et de l’API (`fra1`).
+
 ## Vérifications
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm build` et
