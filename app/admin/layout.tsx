@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 import { pressayAPI } from "@/lib/pressay-api";
 import { getWebIdentity } from "@/lib/server-identity";
 import { AdminStepUp } from "@/components/admin-step-up";
+import { adminMessages, fill } from "@/lib/admin-i18n";
+import { teamMessages } from "@/lib/admin-messages/team";
+import type { AdminSession, OperationsRole } from "@/lib/operations-contract";
 export const dynamic = "force-dynamic";
 const navigation = [
   ["/admin", "Vue d’ensemble"],
@@ -23,7 +26,23 @@ export default async function Layout({
 }) {
   const identity = await getWebIdentity();
   if (!identity) redirect("/sign-in?redirect_url=/admin");
+  const t = adminMessages(teamMessages);
   const access = await pressayAPI("admin/session").catch(() => null);
+  const payload = (await access?.json().catch(() => null)) as
+    | (Partial<AdminSession> & { error?: { code?: string } })
+    | null;
+  if (access?.status === 403 && payload?.error?.code === "two_factor_required")
+    return (
+      <main className="admin-gate">
+        <div>
+          <h1>{t.gate.twoFactorTitle}</h1>
+          <p>{t.gate.twoFactorBody}</p>
+          <Link className="button" href="/account/security">
+            {t.gate.twoFactorAction}
+          </Link>
+        </div>
+      </main>
+    );
   if (!access?.ok)
     return (
       <main className="admin-gate">
@@ -45,6 +64,14 @@ export default async function Layout({
         </div>
       </main>
     );
+  const role: OperationsRole =
+    payload?.role === "support" || payload?.role === "readonly"
+      ? payload.role
+      : "owner";
+  const links =
+    role === "owner"
+      ? [...navigation, ["/admin/team", t.nav.members] as const]
+      : navigation;
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
@@ -53,12 +80,15 @@ export default async function Layout({
           pressay
         </Link>
         <nav>
-          {navigation.map(([href, label]) => (
+          {links.map(([href, label]) => (
             <Link key={href} href={href} prefetch={false}>
               {label}
             </Link>
           ))}
         </nav>
+        <p className="admin-role" data-role={role}>
+          {fill(t.sidebar.role, { role: t.roles[role] })}
+        </p>
         <div className="admin-privacy">
           Comptes et données serveur.<strong>Aucune dictée locale.</strong>
         </div>

@@ -13,6 +13,10 @@ let deletionRequests = 0;
 let supportCalls = [];
 let signOutSubject = "unknown";
 let auditQueries = [];
+// Administrator role returned by admin/session, and whether admin routes
+// require the Authenticator proof (off by default: test users have none).
+let adminRole = "owner";
+let requireTwoFactor = false;
 function decodedClaims(header) {
   const payload = /^Bearer [^.]+\.([^.]+)\./.exec(header ?? "")?.[1];
   if (!payload) return null;
@@ -423,7 +427,72 @@ http
       res.end(JSON.stringify(lastToken));
       return;
     }
+    if (path === "/fixture/admin-role") {
+      let raw = "";
+      req.on("data", (chunk) => (raw += chunk));
+      req.on("end", () => {
+        adminRole = raw || "owner";
+        res.end("ok");
+      });
+      return;
+    }
+    if (path === "/fixture/require-two-factor") {
+      requireTwoFactor = req.method === "POST";
+      res.end("ok");
+      return;
+    }
     if (req.headers.authorization) lastToken = tokenClaims(req.headers.authorization);
+    // Contract: every administrator needs an Authenticator app.
+    if (
+      requireTwoFactor &&
+      path.startsWith("admin/") &&
+      decodedClaims(req.headers.authorization)?.pressay_two_factor !== true
+    ) {
+      res.setHeader("Content-Type", "application/json");
+      res.statusCode = 403;
+      res.end(JSON.stringify({ error: { code: "two_factor_required" } }));
+      return;
+    }
+    if (path === "admin/session") {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ role: adminRole, accountId: me.accountId }));
+      return;
+    }
+    if (path === "admin/members" && req.method === "GET") {
+      res.setHeader("Content-Type", "application/json");
+      if (adminRole !== "owner") {
+        res.statusCode = 403;
+        res.end(JSON.stringify({ error: { code: "role_forbidden" } }));
+        return;
+      }
+      res.end(
+        JSON.stringify({
+          members: [
+            {
+              accountId: me.accountId,
+              authUserId: decodedClaims(req.headers.authorization)?.sub ?? "unknown",
+              email: me.email,
+              role: "owner",
+              addedBy: null,
+              addedByEmail: null,
+              createdAt: "2026-09-01T00:00:00Z",
+              updatedAt: "2026-09-01T00:00:00Z",
+            },
+            {
+              accountId: "00000000-0000-4000-8000-0000000000b2",
+              authUserId: "member-without-web-identity",
+              email: "helper@example.test",
+              role: "support",
+              addedBy: me.accountId,
+              addedByEmail: me.email,
+              createdAt: "2026-10-30T00:00:00Z",
+              updatedAt: "2026-10-30T00:00:00Z",
+            },
+          ],
+        }),
+      );
+      return;
+    }
     if (path === "/health") {
       res.end("ok");
       return;
@@ -484,7 +553,7 @@ http
       auditQueries.push({ path, ...Object.fromEntries(requestURL.searchParams) });
     if (
       req.method === "POST" &&
-      (/^admin\/(users\/[0-9a-f-]{36}\/(grants|deletion)|grants\/[0-9a-f-]{36}\/extend|devices\/[0-9a-f-]{36}\/(revoke|restore)|audit\/external|billing\/events\/stripe\/[A-Za-z0-9_-]+\/replay)$/.test(
+      (/^admin\/(users\/[0-9a-f-]{36}\/(grants|deletion)|grants\/[0-9a-f-]{36}\/extend|devices\/[0-9a-f-]{36}\/(revoke|restore)|audit\/external|billing\/events\/stripe\/[A-Za-z0-9_-]+\/replay|members|members\/[0-9a-f-]{36}\/(role|remove))$/.test(
         path,
       ) ||
         /^devices\/[0-9a-f-]{36}\/restore$/.test(path))
