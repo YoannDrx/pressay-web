@@ -7,6 +7,8 @@ let lastToken = null;
 // Same window as the Cloud's DELETE /v1/me freshness check.
 let deletionMaxAgeSeconds = 600;
 let deletionRequests = 0;
+// Waitlist sign-ups relayed by the site, with the claims of their token.
+let waitlistSignups = [];
 function decodedClaims(header) {
   const payload = /^Bearer [^.]+\.([^.]+)\./.exec(header ?? "")?.[1];
   if (!payload) return null;
@@ -115,6 +117,13 @@ const bodies = {
     searchKind: "stripe_customer",
   },
   "admin/campaigns": { campaigns: [] },
+  "admin/waitlist": {
+    platforms: [
+      { platform: "ios", subscribed: 12, unsubscribed: 1, french: 8, english: 4, last_7d: 5, last_signup_at: "2026-10-30T10:00:00Z" },
+      { platform: "windows", subscribed: 3, unsubscribed: 0, french: 1, english: 2, last_7d: 0, last_signup_at: "2026-10-12T10:00:00Z" },
+    ],
+    sources: [{ platform: "ios", source: "landing", count: 12 }],
+  },
   "admin/referrals": { referrals: [] },
   "admin/billing/events": { events: [] },
   "admin/audit-log": { entries: [] },
@@ -317,6 +326,43 @@ http
         JSON.stringify(
           adminUserDetail(decodedClaims(req.headers.authorization)?.sub),
         ),
+      );
+      return;
+    }
+    if (path === "/fixture/waitlist") {
+      if (req.method === "DELETE") waitlistSignups = [];
+      res.end(JSON.stringify({ signups: waitlistSignups }));
+      return;
+    }
+    if (path === "waitlist" && req.method === "POST") {
+      let raw = "";
+      req.on("data", (chunk) => (raw += chunk));
+      req.on("end", () => {
+        const claims = decodedClaims(req.headers.authorization);
+        waitlistSignups.push({
+          body: JSON.parse(raw),
+          token: claims && {
+            aud: claims.aud,
+            token_use: claims.token_use,
+            client_address: claims.client_address,
+          },
+        });
+        res.statusCode = 202;
+        res.end(JSON.stringify({ status: "registered" }));
+      });
+      return;
+    }
+    if (path === "admin/waitlist/export") {
+      // Contract: the export is a step-up read.
+      const stepUpAt = decodedClaims(req.headers.authorization)?.pressay_step_up_at;
+      if (typeof stepUpAt !== "number" || stepUpAt < Date.now() / 1000 - 600) {
+        res.statusCode = 403;
+        res.end(JSON.stringify({ error: { code: "step_up_required" } }));
+        return;
+      }
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.end(
+        'email,platform,locale,source,consent_at,created_at\r\n"a@example.test","ios","fr","landing","2026-10-30T10:00:00.000Z","2026-10-30T10:00:00.000Z"\r\n',
       );
       return;
     }

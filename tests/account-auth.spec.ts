@@ -163,6 +163,7 @@ test("admin routes render real contract fixtures and remain within the mobile vi
     "/admin/users",
     "/admin/campaigns",
     "/admin/referrals",
+    "/admin/waitlist",
     "/admin/billing",
     "/admin/health",
     "/admin/audit",
@@ -268,6 +269,91 @@ test("admin customer record shows billing, devices and site identity only after 
     path: test.info().outputPath("admin-customer.png"),
     fullPage: true,
   });
+});
+test("waitlists: consented sign-up relayed with a vouched address, counters and audited CSV export", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.delete("http://127.0.0.1:31973/fixture/waitlist");
+  await page.goto("/admin/waitlist");
+  await expect(page.getByRole("cell", { name: "iPhone" }).first()).toBeVisible();
+  await expect(page.getByRole("cell", { name: "12", exact: true }).first()).toBeVisible();
+  // Without step-up the export opens the security panel instead.
+  await page.getByRole("button", { name: "Exporter (CSV)" }).first().click();
+  await expect(
+    page.getByText("Saisis ton code Authenticator dans le panneau ouvert"),
+  ).toBeVisible();
+  const iphone = page.getByRole("form", { name: "Liste d’attente iPhone" });
+  await iphone.getByLabel("Adresse e-mail").fill("Someone@Example.test");
+  await iphone.getByRole("button", { name: "Prévenez-moi" }).click();
+  // The browser refuses the form until consent is given.
+  const unticked = (await (
+    await request.get("http://127.0.0.1:31973/fixture/waitlist")
+  ).json()) as { signups: unknown[] };
+  expect(unticked.signups).toEqual([]);
+  await iphone.getByRole("checkbox").check();
+  await iphone.getByRole("button", { name: "Prévenez-moi" }).click();
+  await expect(iphone.getByRole("status")).toHaveText(
+    "C’est noté. Nous t’écrirons à la sortie de Pressay pour iPhone.",
+  );
+  const windows = page.getByRole("form", { name: "Windows waitlist" });
+  await expect(windows).toContainText("I agree that Pressay may write to this address");
+  await page.screenshot({
+    path: test.info().outputPath("admin-waitlist.png"),
+    fullPage: true,
+  });
+  if (process.env.PRESSAY_SCREENSHOT_DIR)
+    await page.screenshot({
+      path: `${process.env.PRESSAY_SCREENSHOT_DIR}/admin-waitlist-${test.info().project.name}.png`,
+      fullPage: true,
+    });
+  const { signups } = (await (
+    await request.get("http://127.0.0.1:31973/fixture/waitlist")
+  ).json()) as {
+    signups: { body: Record<string, unknown>; token: Record<string, unknown> | null }[];
+  };
+  expect(signups).toHaveLength(1);
+  expect(signups[0]?.body).toEqual({
+    email: "someone@example.test",
+    platform: "ios",
+    locale: "fr",
+    source: "admin-preview",
+    consent: true,
+  });
+  expect(signups[0]?.token).toMatchObject({
+    aud: "pressay-waitlist",
+    token_use: "pressay_waitlist",
+  });
+  expect(typeof signups[0]?.token?.client_address).toBe("string");
+
+  const origin = { Origin: "http://127.0.0.1:31972" };
+  const noConsent = await page.request.post("/api/waitlist", {
+    headers: origin,
+    data: { email: "x@example.test", platform: "ios", locale: "fr", consent: false },
+  });
+  expect(noConsent.status()).toBe(422);
+  const crossSite = await page.request.post("/api/waitlist", {
+    headers: { Origin: "https://attacker.example" },
+    data: { email: "x@example.test", platform: "ios", locale: "fr", consent: true },
+  });
+  expect(crossSite.status()).toBe(403);
+  const repeated = await page.request.post("/api/waitlist", {
+    headers: origin,
+    data: { email: "someone@example.test", platform: "ios", locale: "fr", consent: true },
+  });
+  expect(repeated.status()).toBe(202);
+  expect(await repeated.json()).toEqual({ status: "registered" });
+
+  await grantStepUp(context);
+  await page.reload();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exporter (CSV)" }).first().click();
+  expect((await download).suggestedFilename()).toBe("pressay-waitlist-ios.csv");
+  await expect(page.getByText("Export téléchargé et audité.")).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true);
 });
 test("account lists device platforms, asks to fix a failed payment and exports data", async ({
   page,
