@@ -1,5 +1,7 @@
 import http from "node:http";
 let billingError = false;
+let pastDue = false;
+let identityReads = 0;
 let appleSubscription = false;
 let lastToken = null;
 // Same window as the Cloud's DELETE /v1/me freshness check.
@@ -48,7 +50,31 @@ const bodies = {
     transformations: { used: 2, limit: 100 },
   },
   "billing/status": { provider: null, status: null, currentPeriodEndsAt: null },
-  devices: { devices: [], limit: 3 },
+  devices: {
+    devices: [
+      {
+        id: "00000000-0000-4000-8000-0000000000d1",
+        displayName: "Studio Mac",
+        platform: "macos",
+        appVariant: "direct",
+        appVersion: "1.4.0",
+        lastSeenAt: "2026-10-30T09:00:00Z",
+      },
+      {
+        id: "00000000-0000-4000-8000-0000000000d2",
+        displayName: "Office PC",
+        platform: "windows",
+        appVariant: "direct",
+        appVersion: "1.4.0",
+        lastSeenAt: "2026-10-29T09:00:00Z",
+      },
+    ],
+    limit: 3,
+  },
+  "me/export": {
+    format: "pressay-cloud-export/1",
+    account: { id: "00000000-0000-4000-8000-000000000001", status: "active" },
+  },
   "referrals/me": {
     link: "https://press-say.app/r/ABCDEF123456",
     signups: 2,
@@ -68,7 +94,26 @@ const bodies = {
     subscriptions: [],
     catalogueMRRMinor: 0,
   },
-  "admin/users": { users: [], nextCursor: null },
+  "admin/users": {
+    users: [
+      {
+        id: "00000000-0000-4000-8000-000000000001",
+        email: "owner@example.test",
+        display_name: "owner@example.test",
+        status: "active",
+        created_at: "2026-09-01T00:00:00Z",
+        plan: "pro",
+        entitlement_source: "stripe",
+        sandbox: false,
+        active_device_count: 2,
+        macos_device_count: 1,
+        windows_device_count: 1,
+        last_device_seen_at: "2026-10-30T09:00:00Z",
+      },
+    ],
+    nextCursor: null,
+    searchKind: "stripe_customer",
+  },
   "admin/campaigns": { campaigns: [] },
   "admin/referrals": { referrals: [] },
   "admin/billing/events": { events: [] },
@@ -80,6 +125,114 @@ const bodies = {
     checkedAt: "2026-09-16T12:00:00Z",
   },
 };
+/** Contract fixture of GET /v1/admin/users/:id for the signed-in subject. */
+function adminUserDetail(subject) {
+  return {
+    account: {
+      accountId: me.accountId,
+      authUserId: subject ?? "unknown",
+      email: me.email,
+      status: "active",
+      createdAt: "2026-09-01T00:00:00Z",
+      deletionRequestedAt: null,
+      entitlement: {
+        tier: "pro",
+        source: "stripe",
+        validFrom: "2026-10-01T00:00:00Z",
+        validUntil: "2027-10-01T00:00:00Z",
+        offlineGraceUntil: "2027-10-04T00:00:00Z",
+        revision: 3,
+        sandbox: false,
+      },
+    },
+    billingCustomer: {
+      stripeCustomerId: "cus_Fixture123",
+      appStoreOriginalTransactionId: null,
+      stripeMode: "test",
+    },
+    usage: { transcription: { usedSeconds: 120 }, transformations: { used: 2 } },
+    usageHistory: [
+      { period_start: "2026-10-01", transcription_seconds_used: 120, transformations_used: 2 },
+    ],
+    devices: [
+      {
+        id: "00000000-0000-4000-8000-0000000000d1",
+        displayName: "Studio Mac",
+        platform: "macos",
+        appVariant: "direct",
+        appVersion: "1.4.0",
+        approved: false,
+        lastSeenAt: "2026-10-30T09:00:00Z",
+        createdAt: "2026-09-01T00:00:00Z",
+        revokedAt: null,
+      },
+      {
+        id: "00000000-0000-4000-8000-0000000000d3",
+        displayName: "Old PC",
+        platform: "windows",
+        appVariant: "direct",
+        appVersion: "1.3.0",
+        approved: false,
+        lastSeenAt: "2026-09-10T09:00:00Z",
+        createdAt: "2026-09-02T00:00:00Z",
+        revokedAt: "2026-09-11T00:00:00Z",
+      },
+    ],
+    subscriptions: [
+      {
+        provider: "stripe",
+        provider_subscription_id: "sub_Fixture123",
+        provider_product_id: "prod_fixture",
+        status: "past_due",
+        billing_interval: "year",
+        trial_ends_at: null,
+        current_period_starts_at: "2026-10-01T00:00:00Z",
+        current_period_ends_at: "2027-10-01T00:00:00Z",
+        cancel_at_period_end: true,
+        grace_ends_at: "2026-10-08T00:00:00Z",
+        apple_environment: "Production",
+        created_at: "2026-10-01T00:00:00Z",
+        updated_at: "2026-10-02T00:00:00Z",
+      },
+    ],
+    financialEvents: [
+      {
+        provider_event_id: "evt_fixture",
+        provider_object_id: "in_Fixture123",
+        provider_subscription_id: "sub_Fixture123",
+        kind: "invoice_failed",
+        status: "open",
+        amount_minor: 6900,
+        currency: "eur",
+        full_reversal: false,
+        provider_occurred_at: "2026-10-02T00:00:00Z",
+      },
+    ],
+    legalAcceptances: [
+      {
+        terms_version: "2026-10-01",
+        immediate_performance_consent: true,
+        accepted_at: "2026-10-01T00:00:00Z",
+      },
+    ],
+    deletion: null,
+    grants: [],
+    referrals: [],
+    audit: [
+      {
+        id: "1",
+        actor_id: me.accountId,
+        action: "grant.revoked",
+        target_id: me.accountId,
+        reason: "Fixture",
+        result: "succeeded",
+        request_id: "req-fixture",
+        created_at: "2026-10-03T00:00:00Z",
+      },
+    ],
+    auditReads: { count: 2, lastAt: "2026-10-31T00:00:00Z" },
+  };
+}
 http
   .createServer((req, res) => {
     const requestURL = new URL(req.url, "http://localhost");
@@ -90,6 +243,16 @@ http
     if (path === "/fixture/billing-error") {
       billingError = req.method === "POST";
       res.end("ok");
+      return;
+    }
+    if (path === "/fixture/past-due") {
+      pastDue = req.method === "POST";
+      res.end("ok");
+      return;
+    }
+    if (path === "/fixture/identity-reads") {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ count: identityReads }));
       return;
     }
     if (path === "/fixture/apple-subscription") {
@@ -126,6 +289,34 @@ http
           error: { code: "billing_unavailable" },
           requestId: "fixture-diagnostic",
         }),
+      );
+      return;
+    }
+    if (path === "billing/status" && pastDue) {
+      res.end(
+        JSON.stringify({
+          provider: "stripe",
+          interval: "year",
+          status: "past_due",
+          currentPeriodEndsAt: "2026-12-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        }),
+      );
+      return;
+    }
+    if (path === "me/export") {
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="pressay-cloud-export.json"',
+      );
+    }
+    if (/^admin\/users\/[0-9a-f-]{36}$/.test(path)) {
+      if (requestURL.searchParams.get("include") === "identity")
+        identityReads += 1;
+      res.end(
+        JSON.stringify(
+          adminUserDetail(decodedClaims(req.headers.authorization)?.sub),
+        ),
       );
       return;
     }

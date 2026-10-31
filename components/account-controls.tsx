@@ -180,3 +180,56 @@ export function ReferralLink({
     </>
   );
 }
+
+/**
+ * GDPR self-service export (art. 15 and 20). A POST keeps the request
+ * same-origin-checked; the JSON file is saved without leaving the page.
+ */
+export function AccountExport({ locale }: { locale: "fr" | "en" }) {
+  const fr = locale === "fr";
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState("");
+  async function download() {
+    setPending(true);
+    setMessage("");
+    try {
+      const r = await fetch("/api/account/export", { method: "POST" });
+      if (!r.ok) {
+        setMessage(mutationError(r.status, locale));
+        return;
+      }
+      const name =
+        /filename="([^"]+)"/.exec(r.headers.get("Content-Disposition") ?? "")?.[1] ??
+        "pressay-export.json";
+      const url = URL.createObjectURL(await r.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = name;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setMessage(fr ? "Export téléchargé." : "Export downloaded.");
+    } catch {
+      setMessage(
+        fr ? "Export indisponible. Réessaie." : "Export unavailable. Please retry.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+  return (
+    <div className="account-export">
+      <h3>{fr ? "Exporter mes données" : "Export my data"}</h3>
+      <p>
+        {fr
+          ? "Télécharge au format JSON les données que Pressay Cloud conserve sur ton compte : offre, appareils, abonnements, paiements, consentements et usage Cloud. Les dictées restent sur ton ordinateur et n’en font pas partie."
+          : "Download, as JSON, the data Pressay Cloud keeps about your account: plan, devices, subscriptions, payments, consents and Cloud usage. Dictations stay on your computer and are not included."}
+      </p>
+      <button className="button button-small" onClick={download} disabled={pending}>
+        {pending ? "…" : fr ? "Exporter mes données" : "Export my data"}
+      </button>
+      {message ? <p role="status">{message}</p> : null}
+    </div>
+  );
+}

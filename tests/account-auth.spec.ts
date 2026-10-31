@@ -148,6 +148,127 @@ test("admin routes render real contract fixtures and remain within the mobile vi
       });
   }
 });
+/** Signed admin step-up cookie for the current session, as /api/account/step-up sets it. */
+async function grantStepUp(context: import("@playwright/test").BrowserContext) {
+  const cookie = (await context.cookies()).find(
+    (item) => item.name === "pressay_auth.session_token",
+  );
+  const token = decodeURIComponent(cookie!.value).split(".")[0];
+  const session = (
+    await pool.query<{ id: string; userId: string }>(
+      'SELECT id,"userId" FROM auth_sessions WHERE token=$1',
+      [token],
+    )
+  ).rows[0]!;
+  const now = Math.floor(Date.now() / 1000);
+  const encoded = Buffer.from(
+    JSON.stringify({
+      sub: session.userId,
+      sid: session.id,
+      iat: now,
+      exp: now + 600,
+      method: "totp",
+    }),
+  ).toString("base64url");
+  const signature = createHmac(
+    "sha256",
+    process.env.PRESSAY_INTERNAL_JWT_SECRET!,
+  )
+    .update(encoded)
+    .digest("base64url");
+  await context.addCookies([
+    {
+      name: "pressay_admin_step_up",
+      value: `${encoded}.${signature}`,
+      url: "http://127.0.0.1:31972",
+      httpOnly: true,
+      sameSite: "Strict",
+    },
+  ]);
+  return session;
+}
+test("admin customer record shows billing, devices and site identity only after step-up", async ({
+  page,
+  context,
+  request,
+}) => {
+  const before = (await (
+    await request.get("http://127.0.0.1:31973/fixture/identity-reads")
+  ).json()) as { count: number };
+  await page.goto("/admin/users?search=cus_Fixture123");
+  await expect(page.getByText("Recherche par client Stripe.")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "1 Mac · 1 Windows" })).toBeVisible();
+  await page.getByRole("link", { name: "owner@example.test" }).click();
+  const identity = page.locator(".admin-panel", { hasText: "Connexion au site" });
+  await expect(identity).toContainText("Valide ton code Authenticator");
+
+  const session = await grantStepUp(context);
+  await pool.query(
+    `INSERT INTO auth_accounts(id,"accountId","providerId","userId","createdAt","updatedAt")
+     VALUES($1,$2,'google',$3,now(),now())`,
+    [randomUUID(), randomUUID(), session.userId],
+  );
+  await page.reload();
+  await expect(identity).toContainText("Google");
+  await expect(identity).toContainText("Sessions web actives");
+  await expect(identity).not.toContainText("127.0.0.1");
+  await expect(
+    page.getByRole("link", { name: /cus_Fixture123/ }),
+  ).toHaveAttribute(
+    "href",
+    "https://dashboard.stripe.com/test/customers/cus_Fixture123",
+  );
+  await expect(page.getByText("Paiement échoué")).toBeVisible();
+  await expect(page.getByText("Résiliation programmée")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Windows" })).toBeVisible();
+  await expect(page.getByText(/Révoqué le/)).toBeVisible();
+  await expect(page.getByText("Consultations de cette fiche")).toBeVisible();
+  const after = (await (
+    await request.get("http://127.0.0.1:31973/fixture/identity-reads")
+  ).json()) as { count: number };
+  expect(after.count).toBeGreaterThan(before.count);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true);
+  await page.screenshot({
+    path: test.info().outputPath("admin-customer.png"),
+    fullPage: true,
+  });
+});
+test("account lists device platforms, asks to fix a failed payment and exports data", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/fr");
+  await page.goto("/account/devices");
+  await expect(page.getByText("2 / 3 appareils")).toBeVisible();
+  await expect(page.getByText(/^Windows · 1\.4\.0/)).toBeVisible();
+  await request.post("http://127.0.0.1:31973/fixture/past-due");
+  try {
+    await page.goto("/account/billing");
+    await expect(page.getByRole("alert")).toContainText(
+      "Ton dernier paiement a échoué",
+    );
+    await expect(
+      page.getByRole("button", { name: "Régulariser le paiement" }),
+    ).toBeVisible();
+    await expect(page.getByText("Offre annuelle")).toBeVisible();
+  } finally {
+    await request.delete("http://127.0.0.1:31973/fixture/past-due");
+  }
+  await page.goto("/account/security");
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exporter mes données" }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^pressay-export-\d{4}-\d{2}-\d{2}\.json$/);
+  await expect(page.getByText("Export téléchargé.")).toBeVisible();
+  const crossSite = await page.request.post("/api/account/export", {
+    headers: { Origin: "https://attacker.example" },
+  });
+  expect(crossSite.status()).toBe(403);
+  const proxied = await page.request.get("/api/pressay/me/export");
+  expect(proxied.status()).toBe(404);
+});
 test("logout in another tab removes the authenticated account view", async ({
   page,
   context,
