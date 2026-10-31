@@ -47,7 +47,16 @@ test("session survives landing, account, back, refresh, and active sign-in redir
   });
   // Public pages carry no session lookup: the header links to the account,
   // whose layout owns the session menu.
+  const publicPageAPICalls: string[] = [];
+  const recordAPICall = (request: { url(): string }) => {
+    const path = new URL(request.url()).pathname;
+    if (path.startsWith("/api/")) publicPageAPICalls.push(path);
+  };
+  page.on("request", recordAPICall);
   await page.goto("/en");
+  await page.waitForLoadState("networkidle");
+  page.off("request", recordAPICall);
+  expect(publicPageAPICalls).toEqual([]);
   await expect(page.locator(".session-menu")).toHaveCount(0);
   await expect(
     page.locator(".site-header .nav-actions > a.text-link[href='/account']"),
