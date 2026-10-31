@@ -265,7 +265,7 @@ test("account lists device platforms, asks to fix a failed payment and exports d
   await request.post("http://127.0.0.1:31973/fixture/past-due");
   try {
     await page.goto("/account/billing");
-    await expect(page.getByRole("alert")).toContainText(
+    await expect(page.locator(".account-alert")).toContainText(
       "Ton dernier paiement a échoué",
     );
     await expect(
