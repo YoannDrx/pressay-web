@@ -120,7 +120,59 @@ const bodies = {
   },
   "admin/campaigns": { campaigns: [] },
   "admin/referrals": { referrals: [] },
-  "admin/billing/events": { events: [] },
+  "admin/billing/events": {
+    events: [
+      {
+        provider: "stripe",
+        provider_event_id: "evt_FixtureFailed",
+        event_type: "invoice.paid",
+        state: "failed",
+        error_code: "stripe_api_error",
+        received_at: "2026-10-30T08:00:00Z",
+        processed_at: "2026-10-30T08:00:01Z",
+        account_id: "00000000-0000-4000-8000-000000000001",
+      },
+      {
+        provider: "apple",
+        provider_event_id: "apple-fixture",
+        event_type: "DID_RENEW",
+        state: "failed",
+        error_code: "app_store_unavailable",
+        received_at: "2026-10-29T08:00:00Z",
+        processed_at: "2026-10-29T08:00:01Z",
+        account_id: null,
+      },
+    ],
+    nextCursor: null,
+  },
+  "admin/billing/financial-events": {
+    events: [
+      {
+        provider_event_id: "evt_dispute",
+        provider_object_id: "dp_Fixture",
+        provider_subscription_id: null,
+        kind: "dispute",
+        status: "needs_response",
+        amount_minor: 799,
+        currency: "eur",
+        full_reversal: true,
+        provider_occurred_at: "2026-10-28T00:00:00Z",
+        account_id: "00000000-0000-4000-8000-000000000001",
+        email: "owner@example.test",
+      },
+    ],
+    nextCursor: "2026-10-28T00:00:00+00:00|evt_dispute",
+  },
+  "admin/alerts": {
+    failed_webhooks: 2,
+    failed_webhooks_24h: 1,
+    open_disputes: 1,
+    unpaid_subscriptions: 1,
+    duplicate_subscriptions: 0,
+    refunds_24h: 0,
+    failed_payments_24h: 1,
+    checkedAt: "2026-10-31T06:00:00Z",
+  },
   "admin/audit-log": {
     entries: [
       {
@@ -277,6 +329,18 @@ function adminUserDetail(subject) {
       },
     ],
     auditReads: { count: 2, lastAt: "2026-10-31T00:00:00Z" },
+    providerEvents: [
+      {
+        provider: "stripe",
+        provider_event_id: "evt_FixtureFailed",
+        event_type: "invoice.paid",
+        state: "failed",
+        error_code: "stripe_api_error",
+        received_at: "2026-10-30T08:00:00Z",
+        processed_at: "2026-10-30T08:00:01Z",
+        account_id: me.accountId,
+      },
+    ],
   };
 }
 http
@@ -357,7 +421,10 @@ http
       );
     }
     if (path === "/fixture/support-calls") {
-      if (req.method === "DELETE") supportCalls = [];
+      if (req.method === "DELETE") {
+        supportCalls = [];
+        auditQueries = [];
+      }
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ calls: supportCalls, auditQueries }));
       return;
@@ -371,11 +438,15 @@ http
       });
       return;
     }
-    if (path === "admin/audit-log")
-      auditQueries.push(Object.fromEntries(requestURL.searchParams));
+    if (
+      ["admin/audit-log", "admin/billing/events", "admin/billing/financial-events"].includes(
+        path,
+      )
+    )
+      auditQueries.push({ path, ...Object.fromEntries(requestURL.searchParams) });
     if (
       req.method === "POST" &&
-      (/^admin\/(users\/[0-9a-f-]{36}\/(grants|deletion)|grants\/[0-9a-f-]{36}\/extend|devices\/[0-9a-f-]{36}\/(revoke|restore)|audit\/external)$/.test(
+      (/^admin\/(users\/[0-9a-f-]{36}\/(grants|deletion)|grants\/[0-9a-f-]{36}\/extend|devices\/[0-9a-f-]{36}\/(revoke|restore)|audit\/external|billing\/events\/stripe\/[A-Za-z0-9_-]+\/replay)$/.test(
         path,
       ) ||
         /^devices\/[0-9a-f-]{36}\/restore$/.test(path))

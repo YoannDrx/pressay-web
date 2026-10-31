@@ -74,6 +74,7 @@ test("the generic proxy relays exactly the routes used by client components", ()
     ["POST", `admin/devices/${id}/revoke`],
     ["POST", `admin/devices/${id}/restore`],
     ["POST", `devices/${id}/restore`],
+    ["POST", "admin/billing/events/stripe/evt_1Abc23/replay"],
     ["PATCH", `admin/gates/direct/${id}`],
     ["POST", "admin/rewards/process"],
     ["POST", `admin/rewards/${id}/retry`],
@@ -100,6 +101,8 @@ test("the generic proxy refuses other methods, prefixes and unlisted routes", ()
     ["DELETE", `admin/grants/${id}/revoke`],
     // Recorded server-side only, after the site's own sessions are revoked.
     ["POST", "admin/audit/external"],
+    ["POST", "admin/billing/events/apple/evt_1/replay"],
+    ["GET", "admin/billing/financial-events"],
     ["POST", `admin/devices/${id}/delete`],
     ["GET", `admin/users/${id}/grants`],
     ["DELETE", `devices/${id}/restore`],
