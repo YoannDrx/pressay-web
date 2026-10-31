@@ -9,6 +9,7 @@ import type { Locale } from "@/lib/content";
 import { copy } from "@/lib/content";
 import { publicReleaseCapabilities } from "@/lib/public-release-capabilities";
 import { getWindowsRelease } from "@/lib/release";
+import { defaults as pageDefaults } from "@/lib/page-metadata";
 
 export async function LandingPage({ locale }: { locale: Locale }) {
   const t = copy[locale];
@@ -81,6 +82,8 @@ export async function LandingPage({ locale }: { locale: Locale }) {
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
             name: "Pressay",
+            description: pageDefaults[locale].description,
+            inLanguage: locale,
             applicationCategory: "ProductivityApplication",
             operatingSystem: windowsAvailable
               ? "macOS 14 or later, Windows 10, Windows 11"
