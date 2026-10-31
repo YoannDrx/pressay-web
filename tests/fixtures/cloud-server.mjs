@@ -7,6 +7,10 @@ let lastToken = null;
 // Same window as the Cloud's DELETE /v1/me freshness check.
 let deletionMaxAgeSeconds = 600;
 let deletionRequests = 0;
+// Support actions received by the fake Cloud, in order.
+let supportCalls = [];
+let signOutSubject = "unknown";
+let auditQueries = [];
 function decodedClaims(header) {
   const payload = /^Bearer [^.]+\.([^.]+)\./.exec(header ?? "")?.[1];
   if (!payload) return null;
@@ -117,7 +121,37 @@ const bodies = {
   "admin/campaigns": { campaigns: [] },
   "admin/referrals": { referrals: [] },
   "admin/billing/events": { events: [] },
-  "admin/audit-log": { entries: [] },
+  "admin/audit-log": {
+    entries: [
+      {
+        id: "120",
+        actor_id: me.accountId,
+        actor_email: "owner@example.test",
+        action: "grant.create",
+        target_id: me.accountId,
+        target_account_id: me.accountId,
+        reason: "Beta tester",
+        result: "succeeded",
+        request_id: "req-audit-fixture",
+        details: { grantId: "00000000-0000-4000-8000-0000000000a1", days: 30 },
+        created_at: "2026-10-30T00:00:00Z",
+      },
+      {
+        id: "119",
+        actor_id: null,
+        actor_email: null,
+        action: "launch_gate.updated",
+        target_id: "direct/tax",
+        target_account_id: null,
+        reason: "Checked",
+        result: "failed",
+        request_id: "req-audit-gate",
+        details: { errorCode: "gate_not_found" },
+        created_at: "2026-10-29T00:00:00Z",
+      },
+    ],
+    nextCursor: "119",
+  },
   "admin/health": {
     gates: [],
     jobs: [],
@@ -216,7 +250,17 @@ function adminUserDetail(subject) {
       },
     ],
     deletion: null,
-    grants: [],
+    grants: [
+      {
+        id: "00000000-0000-4000-8000-0000000000a1",
+        source: "support",
+        starts_at: "2026-10-01T00:00:00Z",
+        ends_at: "2027-01-01T00:00:00Z",
+        revoked_at: null,
+        reason: "Beta tester",
+        created_by: me.accountId,
+      },
+    ],
     referrals: [],
     audit: [
       {
@@ -228,6 +272,8 @@ function adminUserDetail(subject) {
         result: "succeeded",
         request_id: "req-fixture",
         created_at: "2026-10-03T00:00:00Z",
+        target_account_id: me.accountId,
+        details: { days: 30, endsAt: "2027-01-01T00:00:00Z" },
       },
     ],
     auditReads: { count: 2, lastAt: "2026-10-31T00:00:00Z" },
@@ -309,6 +355,72 @@ http
         "Content-Disposition",
         'attachment; filename="pressay-cloud-export.json"',
       );
+    }
+    if (path === "/fixture/support-calls") {
+      if (req.method === "DELETE") supportCalls = [];
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ calls: supportCalls, auditQueries }));
+      return;
+    }
+    if (path === "/fixture/sign-out-subject") {
+      let raw = "";
+      req.on("data", (chunk) => (raw += chunk));
+      req.on("end", () => {
+        signOutSubject = raw;
+        res.end("ok");
+      });
+      return;
+    }
+    if (path === "admin/audit-log")
+      auditQueries.push(Object.fromEntries(requestURL.searchParams));
+    if (
+      req.method === "POST" &&
+      (/^admin\/(users\/[0-9a-f-]{36}\/(grants|deletion)|grants\/[0-9a-f-]{36}\/extend|devices\/[0-9a-f-]{36}\/(revoke|restore)|audit\/external)$/.test(
+        path,
+      ) ||
+        /^devices\/[0-9a-f-]{36}\/restore$/.test(path))
+    ) {
+      let raw = "";
+      req.on("data", (chunk) => (raw += chunk));
+      req.on("end", () => {
+        const body = raw ? JSON.parse(raw) : null;
+        supportCalls.push({ path, body });
+        res.setHeader("Content-Type", "application/json");
+        if (path === "admin/audit/external") {
+          res.end(JSON.stringify({ recorded: true, authUserId: signOutSubject }));
+          return;
+        }
+        if (path.startsWith("devices/")) {
+          res.end(JSON.stringify({ restored: true }));
+          return;
+        }
+        res.statusCode = path.endsWith("/grants")
+          ? 201
+          : path.endsWith("/deletion")
+            ? 202
+            : 200;
+        res.end(JSON.stringify({ ok: true }));
+      });
+      return;
+    }
+    if (path === "devices" && requestURL.searchParams.get("include") === "revoked") {
+      res.end(
+        JSON.stringify({
+          ...bodies.devices,
+          revokedDevices: [
+            {
+              id: "00000000-0000-4000-8000-0000000000d3",
+              displayName: "Old PC",
+              platform: "windows",
+              appVariant: "direct",
+              appVersion: "1.3.0",
+              lastSeenAt: "2026-09-10T09:00:00Z",
+              revokedAt: "2026-09-11T00:00:00Z",
+            },
+          ],
+        }),
+      );
+      return;
     }
     if (/^admin\/users\/[0-9a-f-]{36}$/.test(path)) {
       if (requestURL.searchParams.get("include") === "identity")

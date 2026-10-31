@@ -18,6 +18,7 @@ const relayedRoutes: ReadonlyArray<{
   // Account area
   { methods: ["POST"], pattern: /^access\/claim$/ },
   { methods: ["DELETE"], pattern: new RegExp(`^devices/${ID}$`) },
+  { methods: ["POST"], pattern: new RegExp(`^devices/${ID}/restore$`) },
   // Administration (owner role and step-up are enforced by the Cloud)
   { methods: ["POST"], pattern: /^admin\/campaigns$/ },
   {
@@ -29,6 +30,14 @@ const relayedRoutes: ReadonlyArray<{
     pattern: new RegExp(`^admin/campaigns/${ID}/revoke$`),
   },
   { methods: ["POST"], pattern: new RegExp(`^admin/grants/${ID}/revoke$`) },
+  { methods: ["POST"], pattern: new RegExp(`^admin/grants/${ID}/extend$`) },
+  { methods: ["POST"], pattern: new RegExp(`^admin/users/${ID}/grants$`) },
+  { methods: ["POST"], pattern: new RegExp(`^admin/users/${ID}/deletion$`) },
+  {
+    methods: ["POST"],
+    pattern: new RegExp(`^admin/devices/${ID}/(revoke|restore)$`),
+  },
+  // admin/audit/external is called server-side only (sign-out everywhere).
   { methods: ["PATCH"], pattern: new RegExp(`^admin/gates/${ID}/${ID}$`) },
   { methods: ["POST"], pattern: /^admin\/rewards\/process$/ },
   { methods: ["POST"], pattern: new RegExp(`^admin/rewards/${ID}/retry$`) },
