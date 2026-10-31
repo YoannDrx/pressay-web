@@ -1,59 +1,27 @@
-import icons from "@iconify-json/logos/icons.json";
-import simpleIcons from "@iconify-json/simple-icons/icons.json";
-import type { CSSProperties } from "react";
-
-const applications = [
-  ["Mail", "apple"], ["Notes", "apple"], ["Safari", "safari"],
-  ["Chrome", "chrome"], ["Slack", "slack-icon"], ["Notion", "notion-icon"],
-  ["Gmail", "google-gmail"], ["Cursor", "cursor", "simple"],
-  ["VS Code", "visual-studio-code"], ["Xcode", "xcode"],
-  ["Terminal", "terminal"], ["Teams", "microsoft-teams"], ["Obsidian", "obsidian-icon"]
-] as const satisfies ReadonlyArray<readonly [string, string, ("logos" | "simple")?]>;
-
-type Application = typeof applications[number];
+import { brandIconFile, marqueeApplications, type MarqueeApplication } from "@/lib/brand-icons";
 
 export function AppLogoMarquee({ locale }: { locale: "fr" | "en" }) {
   return <div className="app-logo-field">
     <ul className="sr-only" aria-label={locale === "fr" ? "Applications compatibles" : "Compatible applications"}>
-      {applications.map(([name]) => <li key={name}>{name}</li>)}
+      {marqueeApplications.map(([name]) => <li key={name}>{name}</li>)}
     </ul>
-    <Track applications={applications.slice(0, 7)} />
-    <Track applications={applications.slice(7)} reverse />
+    <Track applications={marqueeApplications.slice(0, 7)} />
+    <Track applications={marqueeApplications.slice(7)} reverse />
   </div>;
 }
 
-function Track({ applications: track, reverse = false }: { applications: readonly Application[]; reverse?: boolean }) {
+function Track({ applications: track, reverse = false }: { applications: readonly MarqueeApplication[]; reverse?: boolean }) {
   return <div className={`logo-track ${reverse ? "logo-track-reverse" : ""}`} aria-hidden="true">
     <div>{[...track, ...track].map((application, index) => {
-      const [name, icon, source] = application;
+      const [name, icon] = application;
+      const source = application.length > 2 ? application[2] : "logos";
       return <span className="app-logo-card" key={`${name}-${index}`}>
-        <BrandIcon name={icon} source={source} /><b>{name}</b>
+        {/* Decorative files from /brand-icons, cached by the CDN; the alt text
+            lives in the screen-reader list above. */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- static SVG, nothing to optimize */}
+        <img className="brand-icon" src={`/brand-icons/${brandIconFile(icon, source)}`} alt="" width={27} height={27} decoding="async" fetchPriority="low" />
+        <b>{name}</b>
       </span>;
     })}</div>
   </div>;
-}
-
-function BrandIcon({ name, source = "logos" }: { name: string; source?: "logos" | "simple" }) {
-  if (source === "simple") {
-    const icon = simpleIcons.icons[name as keyof typeof simpleIcons.icons];
-    if (!icon) return <span className="brand-icon-fallback">●</span>;
-    const width = "width" in icon && typeof icon.width === "number" ? icon.width : simpleIcons.width;
-    const height = "height" in icon && typeof icon.height === "number" ? icon.height : simpleIcons.height;
-    return <BrandIconImage body={icon.body} width={width} height={height} />;
-  }
-  const icon = icons.icons[name as keyof typeof icons.icons];
-  if (!icon) return <span className="brand-icon-fallback">●</span>;
-  const width = "width" in icon && typeof icon.width === "number" ? icon.width : icons.width;
-  const height = "height" in icon && typeof icon.height === "number" ? icon.height : icons.height;
-  return <BrandIconImage body={icon.body} width={width} height={height} />;
-}
-
-function BrandIconImage({ body, width, height }: { body: string; width: number; height: number }) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">${body}</svg>`;
-  const image = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-  return <span
-    aria-hidden="true"
-    className="brand-icon brand-icon-image"
-    style={{ backgroundImage: image } as CSSProperties}
-  />;
 }

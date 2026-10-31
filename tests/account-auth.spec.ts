@@ -45,8 +45,13 @@ test("session survives landing, account, back, refresh, and active sign-in redir
     if (message.type() === "error" && /hydrat/i.test(message.text()))
       hydrationErrors.push(message.text());
   });
+  // Public pages carry no session lookup: the header links to the account,
+  // whose layout owns the session menu.
   await page.goto("/en");
-  await expect(page.locator(".session-menu summary")).toBeVisible();
+  await expect(page.locator(".session-menu")).toHaveCount(0);
+  await expect(
+    page.locator(".site-header .nav-actions > a.text-link[href='/account']"),
+  ).toHaveText("My account");
   await page.goto("/account");
   await expect(
     page.getByRole("heading", { name: "Your Pressay account" }),
@@ -55,8 +60,10 @@ test("session survives landing, account, back, refresh, and active sign-in redir
     path: test.info().outputPath("account.png"),
     fullPage: true,
   });
-  await page.goBack();
   await expect(page.locator(".session-menu summary")).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/en$/);
+  await page.goForward();
   await page.reload();
   await expect(page.locator(".session-menu summary")).toBeVisible();
   await page.goto("/sign-in?locale=en&redirect_url=%2Faccount%2Fdevices");
@@ -158,7 +165,7 @@ test("logout in another tab removes the authenticated account view", async ({
     page.getByRole("heading", { name: "Your Pressay account" }),
   ).toBeVisible();
   const other = await context.newPage();
-  await other.goto("/en");
+  await other.goto("/account");
   await other.locator(".session-menu summary").click();
   await other.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(other).toHaveURL(/\/en$/);
@@ -383,6 +390,7 @@ test("Google sign-in redirects to Google with the exact callback URI and shows e
   await expect(buttons.first()).toHaveText("Continuer avec Google");
   await page.waitForTimeout(500);
   expect(authorize).toBeNull();
+
 });
 
 test("TOTP cannot be disabled without a current authenticator code", async ({
