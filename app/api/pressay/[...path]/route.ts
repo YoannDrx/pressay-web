@@ -1,16 +1,7 @@
 import { sameOrigin } from "@/lib/request-origin";
 import { NextResponse } from "next/server";
 import { pressayAPI } from "@/lib/pressay-api";
-
-const allowedPrefixes = [
-  "admin/",
-  "access/",
-  "referrals/",
-  "devices/",
-  "billing/",
-  "entitlements",
-  "me",
-];
+import { proxyRoute } from "@/lib/pressay-proxy-routes";
 
 async function forward(
   request: Request,
@@ -22,26 +13,10 @@ async function forward(
       { status: 403 },
     );
   const { path } = await context.params;
-  if (path.some((segment) => !/^[A-Za-z0-9_-]+$/.test(segment)))
-    return NextResponse.json({ error: "route_not_allowed" }, { status: 404 });
-  const target = path.join("/");
-  // This mutation accepts only the verified cookie through /api/referral/attribute
-  // or Checkout. The generic proxy must not accept a client-selected timestamp.
-  if (
-    target.startsWith("referrals/") &&
-    !["GET", "HEAD"].includes(request.method)
-  )
-    return NextResponse.json(
-      { error: "signed_referral_required" },
-      { status: 403 },
-    );
-  if (
-    !allowedPrefixes.some(
-      (prefix) => target === prefix || target.startsWith(prefix),
-    )
-  ) {
-    return NextResponse.json({ error: "route_not_allowed" }, { status: 404 });
-  }
+  const route = proxyRoute(request.method, path);
+  if (!route.allowed)
+    return NextResponse.json({ error: route.error }, { status: route.status });
+  const target = route.target;
   const body = ["GET", "HEAD"].includes(request.method)
     ? undefined
     : await request.text();

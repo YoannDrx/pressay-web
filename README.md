@@ -44,6 +44,13 @@ maximum). Les jetons du proxy serveur portent l’audience
 `PRESSAY_WEB_PROXY_JWT_AUDIENCE` (`pressay-web-proxy` par défaut), identique
 côté Cloud.
 
+Le proxy navigateur `/api/pressay/*` ne relaie que les couples méthode/route
+listés dans `lib/pressay-proxy-routes.ts` ; les routes `me` n’y passent jamais.
+La suppression de compte passe par `/api/auth/delete-user` (connexion de moins
+de 10 minutes exigée par Better Auth). Le jeton proxy transmet l’heure de
+connexion de la session (`pressay_auth_at`), que le Cloud revérifie avant
+toute suppression.
+
 ## Vérifications
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm build` et

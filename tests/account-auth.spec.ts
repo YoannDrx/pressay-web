@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
 import { randomUUID, createHmac, createHash } from "node:crypto";
 import { Pool } from "pg";
 test.skip(
@@ -429,6 +429,11 @@ test("TOTP cannot be disabled without a current authenticator code", async ({
   await expect(totp.getByText("Authenticator désactivé.")).toBeVisible();
 });
 
+async function deletionCount(request: APIRequestContext): Promise<number> {
+  const response = await request.get("http://127.0.0.1:31973/fixture/deletions");
+  return ((await response.json()) as { count: number }).count;
+}
+
 test("account deletion asks for a fresh sign-in, then warns about an Apple subscription", async ({
   page,
   request,
@@ -448,6 +453,27 @@ test("account deletion asks for a fresh sign-in, then warns about an Apple subsc
   await pool.query(
     `UPDATE auth_sessions SET "createdAt" = now() WHERE "userId" = (SELECT id FROM auth_users ORDER BY "createdAt" DESC LIMIT 1)`,
   );
+  // The browser proxy never relays account deletion, whatever the spelling.
+  const deletionsBefore = await deletionCount(request);
+  for (const path of ["me", "ME", "me/", "v1/me", "me%2F", "devices/../me"]) {
+    const response = await page.request.delete(`/api/pressay/${path}`, {
+      headers: { Origin: "http://127.0.0.1:31972" },
+      maxRedirects: 0,
+    });
+    expect([308, 404], path).toContain(response.status());
+  }
+  expect(await deletionCount(request)).toBe(deletionsBefore);
+
+  // The Cloud re-checks freshness itself; its refusal asks for a new sign-in.
+  await request.post("http://127.0.0.1:31973/fixture/deletion-max-age");
+  try {
+    await page.goto("/account/security?resume=delete-account");
+    await page.getByRole("button", { name: "Supprimer définitivement" }).click();
+    await expect(page.getByText("Confirme ton identité.")).toBeVisible();
+  } finally {
+    await request.delete("http://127.0.0.1:31973/fixture/deletion-max-age");
+  }
+
   await request.post("http://127.0.0.1:31973/fixture/apple-subscription");
   try {
     await page.goto("/account/security?resume=delete-account");

@@ -5,7 +5,11 @@ import { jwt, twoFactor } from "better-auth/plugins";
 import { APIError } from "better-auth/api";
 import { Pool } from "pg";
 import { generateAppleClientSecret } from "@/lib/apple";
-import { appleDeletionAcknowledged } from "@/lib/account-deletion";
+import {
+  appleDeletionAcknowledged,
+  cloudErrorCode,
+  RECENT_AUTHENTICATION_REQUIRED,
+} from "@/lib/account-deletion";
 import { secondFactorChangeGuard } from "@/lib/second-factor-guard";
 import {
   appleAuthIsConfigured,
@@ -88,16 +92,18 @@ export const authOptions = {
           acknowledged ? "me?acknowledgeAppleSubscription=true" : "me",
           { method: "DELETE" },
         );
-        if (result.status === 409) {
-          const payload = await result.json().catch(() => null);
-          const code =
-            typeof payload?.error === "string"
-              ? payload.error
-              : payload?.error?.code;
+        if (result.status === 409 || result.status === 403) {
+          const code = cloudErrorCode(await result.json().catch(() => null));
           if (code === "apple_subscription_active")
             throw new APIError("CONFLICT", {
               code: "APPLE_SUBSCRIPTION_ACTIVE",
               message: "An Apple subscription is still active",
+            });
+          // The Cloud checks session freshness itself; nothing was deleted.
+          if (code === RECENT_AUTHENTICATION_REQUIRED)
+            throw APIError.from("FORBIDDEN", {
+              code: "SESSION_NOT_FRESH",
+              message: "A recent sign-in is required to delete the account",
             });
         }
         if (!result.ok && result.status !== 404)
