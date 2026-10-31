@@ -56,15 +56,18 @@ export type Billing = {
   currentPeriodEndsAt: string | null;
   cancelAtPeriodEnd?: boolean;
 };
+export type Device = {
+  id: string;
+  displayName: string;
+  platform?: "macos" | "windows";
+  appVersion: string;
+  appVariant: string;
+  lastSeenAt: string;
+};
 export type Devices = {
   limit: number;
-  devices: {
-    id: string;
-    displayName: string;
-    platform?: "macos" | "windows";
-    appVersion: string;
-    appVariant: string;
-    lastSeenAt: string;
-  }[];
+  devices: Device[];
+  /** Present when asked with `?include=revoked` (Cloud with device restore). */
+  revokedDevices?: (Device & { revokedAt: string })[];
 };
 export type { ReferralSummary as Referrals } from "./operations-contract";

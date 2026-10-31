@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminHeading } from "@/components/admin-heading";
 import { AdminActionForm } from "@/components/admin-action-form";
+import { ProviderEventAction } from "@/components/admin-provider-event-action";
 import { adminData, AdminTable, adminDate } from "@/components/admin-data";
 import { readAdminIdentity, type AdminIdentity } from "@/lib/admin-identity";
 import {
@@ -10,6 +11,7 @@ import {
   platformLabel,
   stripeDashboardURL,
 } from "@/lib/admin-format";
+import { auditDetails } from "@/lib/admin-audit";
 import type { AdminUserDetail } from "@/lib/operations-contract";
 
 const sourceLabels: Record<string, string> = {
@@ -35,6 +37,12 @@ const financialKinds: Record<string, string> = {
   invoice_voided: "Facture annulée",
   refund: "Remboursement",
   dispute: "Litige",
+};
+const grantSources: Record<string, string> = {
+  support: "Offert par le support",
+  invitation: "Invitation",
+  referral: "Parrainage",
+  legacy: "Historique",
 };
 const providerLabels: Record<string, string> = {
   google: "Google",
@@ -105,6 +113,16 @@ export default async function Page({
             <div className="account-error" role="status">
               Paiement à régulariser sur un abonnement.
             </div>
+          ) : null}
+          {d.account.status === "active" ? (
+            <SupportActions
+              accountId={d.account.accountId}
+              hasAppleSubscription={d.subscriptions.some(
+                (s) =>
+                  s.provider === "app_store" &&
+                  ["trialing", "active", "grace", "past_due"].includes(s.status),
+              )}
+            />
           ) : null}
           <section className="admin-grid-two admin-detail">
             <article className="admin-panel">
@@ -248,6 +266,28 @@ export default async function Page({
             ])}
           />
 
+          {d.providerEvents?.length ? (
+            <>
+              <h2>Événements Stripe et Apple de ce compte</h2>
+              <AdminTable
+                headers={["Reçu", "Fournisseur", "Type", "État", "Erreur", "Action"]}
+                rows={d.providerEvents.map((e) => [
+                  adminDate(e.received_at),
+                  e.provider === "stripe" ? "Stripe" : "Apple",
+                  e.event_type,
+                  <span
+                    key="state"
+                    className={e.state === "failed" ? "admin-danger" : ""}
+                  >
+                    {e.state}
+                  </span>,
+                  e.error_code ?? "—",
+                  <ProviderEventAction key="action" event={e} />,
+                ])}
+              />
+            </>
+          ) : null}
+
           <h2>
             Appareils ({activeDevices.length} / 3 actifs, {d.devices.length} au
             total)
@@ -261,6 +301,7 @@ export default async function Page({
               "Ajouté",
               "Dernier contact",
               "État",
+              "Action",
             ]}
             rows={d.devices.map((v) => [
               v.displayName,
@@ -270,6 +311,33 @@ export default async function Page({
               adminDate(v.createdAt),
               adminDate(v.lastSeenAt),
               v.revokedAt ? `Révoqué le ${adminDate(v.revokedAt)}` : "Actif",
+              d.account.status !== "active" ? (
+                "—"
+              ) : v.revokedAt ? (
+                activeDevices.length < 3 ? (
+                  <AdminActionForm
+                    key={`restore-${v.id}`}
+                    compact
+                    endpoint={`/api/pressay/admin/devices/${v.id}/restore`}
+                    title="Réactiver"
+                    submitLabel="Réactiver"
+                    fields={[{ name: "reason", label: "Motif", required: true }]}
+                    confirmMessage="Réactiver cet appareil ? Il pourra de nouveau se connecter et utiliser le Cloud."
+                  />
+                ) : (
+                  "3 appareils actifs : en révoquer un d’abord"
+                )
+              ) : (
+                <AdminActionForm
+                  key={`revoke-${v.id}`}
+                  compact
+                  endpoint={`/api/pressay/admin/devices/${v.id}/revoke`}
+                  title="Révoquer"
+                  submitLabel="Révoquer"
+                  fields={[{ name: "reason", label: "Motif", required: true }]}
+                  confirmMessage="Révoquer cet appareil ? Il perdra l’accès Cloud et sera refusé à la connexion jusqu’à sa réactivation."
+                />
+              ),
             ])}
           />
 
@@ -295,21 +363,45 @@ export default async function Page({
 
           <h2>Accès offerts</h2>
           <AdminTable
-            headers={["Origine", "Début", "Fin", "État", "Action"]}
+            headers={["Origine", "Début", "Fin", "État", "Motif", "Actions"]}
             rows={d.grants.map((g) => [
-              g.source,
+              grantSources[g.source] ?? g.source,
               adminDate(g.starts_at),
               adminDate(g.ends_at),
-              g.revoked_at ? "Révoqué" : "Accordé",
-              !g.revoked_at ? (
-                <AdminActionForm
-                  key={g.id}
-                  endpoint={`/api/pressay/admin/grants/${g.id}/revoke`}
-                  title="Révoquer cet accès"
-                  submitLabel="Révoquer"
-                  fields={[{ name: "reason", label: "Motif", required: true }]}
-                  confirmMessage="Retirer cet accès offert ? Les abonnements payants seront conservés."
-                />
+              g.revoked_at
+                ? `Révoqué le ${adminDate(g.revoked_at)}`
+                : new Date(g.ends_at) > new Date()
+                  ? "En cours"
+                  : "Terminé",
+              g.reason ?? "—",
+              !g.revoked_at && d.account.status === "active" ? (
+                <div className="admin-row-actions" key={g.id}>
+                  <AdminActionForm
+                    compact
+                    endpoint={`/api/pressay/admin/grants/${g.id}/extend`}
+                    title="Prolonger"
+                    submitLabel="Prolonger"
+                    fields={[
+                      {
+                        name: "days",
+                        label: "Jours (1–365)",
+                        type: "number",
+                        value: 30,
+                        required: true,
+                      },
+                      { name: "reason", label: "Motif", required: true },
+                    ]}
+                    confirmMessage="Prolonger cet accès ? La durée part de sa fin, ou d’aujourd’hui s’il est terminé."
+                  />
+                  <AdminActionForm
+                    compact
+                    endpoint={`/api/pressay/admin/grants/${g.id}/revoke`}
+                    title="Révoquer"
+                    submitLabel="Révoquer"
+                    fields={[{ name: "reason", label: "Motif", required: true }]}
+                    confirmMessage="Retirer cet accès offert ? Les abonnements payants seront conservés."
+                  />
+                </div>
               ) : (
                 "—"
               ),
@@ -333,16 +425,32 @@ export default async function Page({
 
           <h2>Journal d’audit de ce compte</h2>
           <AdminTable
-            headers={["Date", "Action", "Cible", "Motif", "Résultat", "Requête"]}
+            headers={[
+              "Date",
+              "Action",
+              "Cible",
+              "Motif",
+              "Résultat",
+              "Détails",
+              "Requête",
+            ]}
             rows={(d.audit ?? []).map((a) => [
               adminDate(a.created_at),
               a.action,
               a.target_id === d.account.accountId ? "Compte" : a.target_id,
               a.reason,
               a.result,
+              auditDetails(a.details),
               <code key="req">{a.request_id}</code>,
             ])}
           />
+          <p>
+            <Link
+              href={`/admin/audit?target=${encodeURIComponent(d.account.accountId)}`}
+            >
+              Tout le journal de ce compte →
+            </Link>
+          </p>
           {d.auditReads ? (
             <p>
               Consultations de cette fiche journalisées :{" "}
@@ -424,5 +532,75 @@ function IdentityPanel({ identity }: { identity: AdminIdentity | null }) {
         </ul>
       ) : null}
     </article>
+  );
+}
+
+/**
+ * Support actions on an active account. Each one asks for confirmation and a
+ * reason, carries an idempotency key, and is checked (owner role, step-up)
+ * and audited by the Cloud.
+ */
+function SupportActions({
+  accountId,
+  hasAppleSubscription,
+}: {
+  accountId: string;
+  hasAppleSubscription: boolean;
+}) {
+  return (
+    <section className="admin-actions-section">
+      <h2>Actions de support</h2>
+      <div className="admin-actions-grid admin-support-actions">
+        <AdminActionForm
+          endpoint={`/api/pressay/admin/users/${accountId}/grants`}
+          title="Offrir Pro"
+          description="Accès Pro à partir de maintenant, sans code à activer. Les abonnements payants sont conservés ; le droit le plus long s’applique."
+          submitLabel="Offrir Pro"
+          fields={[
+            {
+              name: "days",
+              label: "Durée (1–365 jours)",
+              type: "number",
+              value: 30,
+              required: true,
+            },
+            { name: "reason", label: "Motif", required: true },
+          ]}
+          confirmMessage="Offrir Pro à ce compte maintenant ?"
+        />
+        <AdminActionForm
+          endpoint={`/api/admin/users/${accountId}/sign-out`}
+          title="Déconnecter partout"
+          description="Ferme toutes les sessions du site et retire les autorisations des apps Mac et Windows. Les sessions déjà ouvertes s’arrêtent sous une minute ; les apps doivent se reconnecter au plus tard 15 minutes après."
+          submitLabel="Déconnecter"
+          fields={[{ name: "reason", label: "Motif", required: true }]}
+          confirmMessage="Déconnecter ce client de tous ses navigateurs et de ses apps ?"
+        />
+        <AdminActionForm
+          endpoint={`/api/pressay/admin/users/${accountId}/deletion`}
+          title="Demander la suppression du compte"
+          description="Même effet qu’une suppression par le client : appareils révoqués immédiatement, puis effacement des données Cloud, du client Stripe et de l’identité du site par la tâche quotidienne. Irréversible."
+          submitLabel="Demander la suppression"
+          fields={[
+            ...(hasAppleSubscription
+              ? [
+                  {
+                    name: "acknowledgeAppleSubscription",
+                    label: "Abonnement App Store actif (Apple continuera de facturer)",
+                    type: "select" as const,
+                    value: "false",
+                    options: [
+                      { label: "Ne pas supprimer", value: "false" },
+                      { label: "Supprimer quand même", value: "true" },
+                    ],
+                  },
+                ]
+              : []),
+            { name: "reason", label: "Motif", required: true },
+          ]}
+          confirmMessage="Supprimer définitivement ce compte ? Cette action ne peut pas être annulée."
+        />
+      </div>
+    </section>
   );
 }

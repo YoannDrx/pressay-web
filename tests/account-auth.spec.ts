@@ -160,6 +160,7 @@ test("admin routes render real contract fixtures and remain within the mobile vi
   ).toBe("en");
   for (const route of [
     "/admin",
+    "/admin/metrics",
     "/admin/users",
     "/admin/campaigns",
     "/admin/referrals",
@@ -929,4 +930,290 @@ test("pages linked from the Mac app stay live", async ({ page }) => {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(200);
   }
+});
+
+const SCREENSHOTS = process.env.PRESSAY_SCREENSHOT_DIR;
+/** Full-page capture kept with the test output (and in a chosen folder). */
+async function capture(page: import("@playwright/test").Page, name: string) {
+  const project = test.info().project.name;
+  await page.screenshot({ path: test.info().outputPath(`${name}.png`), fullPage: true });
+  if (SCREENSHOTS)
+    await page.screenshot({
+      path: `${SCREENSHOTS}/${name}-${project}.png`,
+      fullPage: true,
+    });
+}
+type SupportCall = { path: string; body: Record<string, unknown> | null };
+async function supportCalls(request: APIRequestContext): Promise<SupportCall[]> {
+  return (
+    (await (
+      await request.get("http://127.0.0.1:31973/fixture/support-calls")
+    ).json()) as { calls: SupportCall[] }
+  ).calls;
+}
+const CUSTOMER = "00000000-0000-4000-8000-000000000001";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+test("support offers and extends Pro and restores a device from the record, with a reason", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.delete("http://127.0.0.1:31973/fixture/support-calls");
+  await grantStepUp(context);
+  page.on("dialog", (dialog) => void dialog.accept());
+  await page.goto(`/admin/users/${CUSTOMER}`);
+  const offer = page.getByRole("form", { name: "Offrir Pro" });
+  await offer.getByLabel("Durée (1–365 jours)").fill("45");
+  await offer.getByLabel("Motif").fill("Partenaire presse");
+  await offer.getByRole("button", { name: "Offrir Pro" }).click();
+  await expect(offer.getByRole("status")).toHaveText("Action effectuée et auditée.");
+
+  const extend = page.getByRole("form", { name: "Prolonger" });
+  await extend.getByLabel("Jours (1–365)").fill("10");
+  await extend.getByLabel("Motif").fill("Geste commercial");
+  await extend.getByRole("button", { name: "Prolonger" }).click();
+  await expect(extend.getByRole("status")).toHaveText("Action effectuée et auditée.");
+
+  const restore = page.getByRole("form", { name: "Réactiver" });
+  await restore.getByLabel("Motif").fill("Ordinateur retrouvé");
+  await restore.getByRole("button", { name: "Réactiver" }).click();
+  await expect(restore.getByRole("status")).toHaveText("Action effectuée et auditée.");
+  await expect(page.getByText("Beta tester")).toBeVisible();
+  await expect(page.getByText(/jours 30 · fin/)).toBeVisible();
+
+  const calls = await supportCalls(request);
+  expect(calls.map((call) => call.path)).toEqual([
+    `admin/users/${CUSTOMER}/grants`,
+    "admin/grants/00000000-0000-4000-8000-0000000000a1/extend",
+    "admin/devices/00000000-0000-4000-8000-0000000000d3/restore",
+  ]);
+  expect(calls[0]?.body).toMatchObject({ days: 45, reason: "Partenaire presse" });
+  expect(calls[1]?.body).toMatchObject({ days: 10, reason: "Geste commercial" });
+  for (const call of calls)
+    expect(String(call.body?.idempotencyKey)).toMatch(UUID_PATTERN);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true);
+  await capture(page, "admin-support-actions");
+});
+
+test("sign out everywhere ends the customer's web sessions and app tokens, after step-up", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.delete("http://127.0.0.1:31973/fixture/support-calls");
+  const customer = randomUUID();
+  await pool.query(
+    'INSERT INTO auth_users(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,$2,$3,true,now(),now())',
+    [customer, "Customer", `${customer}@example.test`],
+  );
+  for (const id of [randomUUID(), randomUUID()])
+    await pool.query(
+      'INSERT INTO auth_sessions(id,token,"userId","expiresAt","createdAt","updatedAt") VALUES($1,$2,$3,now()+interval \'30 days\',now(),now())',
+      [id, randomUUID(), customer],
+    );
+  const clientId = `support-test-${randomUUID()}`;
+  await pool.query(
+    `INSERT INTO auth_oauth_clients(id,"clientId","redirectUris","tokenEndpointAuthMethod","grantTypes","responseTypes","requirePKCE","skipConsent",scopes,name,"createdAt","updatedAt")
+     VALUES($1,$2,'["pressay://callback"]','none','["refresh_token"]','["code"]',true,true,'["openid"]','Pressay for Windows',now(),now())`,
+    [randomUUID(), clientId],
+  );
+  const refresh = randomUUID();
+  await pool.query(
+    `INSERT INTO auth_oauth_refresh_tokens(id,token,"clientId","userId","expiresAt","createdAt",scopes)
+     VALUES($1,$2,$3,$4,now()+interval '30 days',now(),'["openid"]')`,
+    [refresh, randomUUID(), clientId, customer],
+  );
+  await pool.query(
+    `INSERT INTO auth_oauth_access_tokens(id,token,"clientId","userId","refreshId","expiresAt","createdAt",scopes)
+     VALUES($1,$2,$3,$4,$5,now()+interval '15 minutes',now(),'["openid"]')`,
+    [randomUUID(), randomUUID(), clientId, customer, refresh],
+  );
+  await request.post("http://127.0.0.1:31973/fixture/sign-out-subject", {
+    data: customer,
+  });
+
+  await page.goto("/fr");
+  const endpoint = `/api/admin/users/${CUSTOMER}/sign-out`;
+  const body = { idempotencyKey: randomUUID(), reason: "Ordinateur volé" };
+  const origin = { Origin: "http://127.0.0.1:31972" };
+  const withoutStepUp = await page.request.post(endpoint, { headers: origin, data: body });
+  expect(withoutStepUp.status()).toBe(403);
+  expect((await withoutStepUp.json()).error.code).toBe("step_up_required");
+  const session = await grantStepUp(context);
+  const crossSite = await page.request.post(endpoint, {
+    headers: { Origin: "https://attacker.example" },
+    data: body,
+  });
+  expect(crossSite.status()).toBe(403);
+  expect(
+    (await page.request.post(endpoint, { headers: origin, data: { ...body, reason: "" } })).status(),
+  ).toBe(422);
+  expect(await supportCalls(request)).toEqual([]);
+
+  page.on("dialog", (dialog) => void dialog.accept());
+  await page.goto(`/admin/users/${CUSTOMER}`);
+  const form = page.getByRole("form", { name: "Déconnecter partout" });
+  await form.getByLabel("Motif").fill("Ordinateur volé");
+  await form.getByRole("button", { name: "Déconnecter" }).click();
+  await expect(form.getByRole("status")).toHaveText("Action effectuée et auditée.");
+
+  const remaining = await pool.query<{ table: string; count: number }>(
+    `SELECT 'sessions' AS table,count(*)::int FROM auth_sessions WHERE "userId"=$1
+     UNION ALL SELECT 'refresh',count(*)::int FROM auth_oauth_refresh_tokens WHERE "userId"=$1
+     UNION ALL SELECT 'access',count(*)::int FROM auth_oauth_access_tokens WHERE "userId"=$1`,
+    [customer],
+  );
+  expect(remaining.rows.map((row) => row.count)).toEqual([0, 0, 0]);
+  // The owner's own session is untouched.
+  expect(
+    (await pool.query("SELECT 1 FROM auth_sessions WHERE id=$1", [session.id])).rowCount,
+  ).toBe(1);
+  const calls = await supportCalls(request);
+  expect(calls.map((call) => [call.path, call.body?.result])).toEqual([
+    ["admin/audit/external", "requested"],
+    ["admin/audit/external", "succeeded"],
+  ]);
+  expect(calls[1]?.body).toMatchObject({
+    action: "user.sessions.revoke",
+    targetAccountId: CUSTOMER,
+    reason: "Ordinateur volé",
+    details: { webSessions: 2, oauthRefreshTokens: 1, oauthAccessTokens: 1 },
+  });
+  expect(calls[0]?.body?.idempotencyKey).toBe(calls[1]?.body?.idempotencyKey);
+  expect(JSON.stringify(calls)).not.toContain(customer);
+  const relayed = await page.request.post("/api/pressay/admin/audit/external", {
+    headers: origin,
+    data: { ...body, action: "user.sessions.revoke", result: "requested" },
+  });
+  expect(relayed.status()).toBe(404);
+});
+
+test("audit ledger shows full authors and details, filters and pages under step-up", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.delete("http://127.0.0.1:31973/fixture/support-calls");
+  await grantStepUp(context);
+  await page.goto("/admin/audit");
+  await expect(page.getByText("owner@example.test")).toBeVisible();
+  await expect(page.getByRole("link", { name: CUSTOMER }).first()).toBeVisible();
+  await expect(page.getByText(/accès 00000000-0000-4000-8000-0000000000a1 · jours 30/)).toBeVisible();
+  await expect(page.getByText("Échec")).toBeVisible();
+  await page.getByLabel("Action (ou préfixe)").fill("grant");
+  await page.getByLabel("Compte ou cible").fill(CUSTOMER);
+  await page.getByLabel("Du", { exact: true }).fill("2026-10-01");
+  await page.getByRole("button", { name: "Filtrer" }).click();
+  await expect(page).toHaveURL(/action=grant/);
+  await page.getByRole("link", { name: "Plus anciennes →" }).click();
+  await expect(page).toHaveURL(/cursor=119/);
+  await expect(page.getByRole("link", { name: "← Plus récentes" })).toBeVisible();
+  const { auditQueries } = (await (
+    await request.get("http://127.0.0.1:31973/fixture/support-calls")
+  ).json()) as { auditQueries: Record<string, string>[] };
+  expect(auditQueries[0]).toEqual({ path: "admin/audit-log", reads: "exclude" });
+  expect(auditQueries.at(-1)).toEqual({
+    path: "admin/audit-log",
+    action: "grant",
+    target: CUSTOMER,
+    from: "2026-10-01",
+    reads: "exclude",
+    cursor: "119",
+  });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true);
+  await capture(page, "admin-audit");
+});
+
+test("the account lists revoked devices and restores one", async ({ page, request }) => {
+  await request.delete("http://127.0.0.1:31973/fixture/support-calls");
+  page.on("dialog", (dialog) => void dialog.accept());
+  await page.goto("/fr");
+  await page.goto("/account/devices");
+  const revoked = page.locator(".account-card", { hasText: "Appareils révoqués" });
+  await expect(revoked).toContainText("Old PC");
+  await expect(revoked).toContainText("Révoqué le");
+  await revoked.getByRole("button", { name: "Réactiver" }).click();
+  await expect
+    .poll(async () => (await supportCalls(request)).map((call) => call.path))
+    .toEqual(["devices/00000000-0000-4000-8000-0000000000d3/restore"]);
+  await capture(page, "account-revoked-devices");
+});
+
+test("billing tabs show disputes and failed webhooks, replay a Stripe event and alert on the overview", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.delete("http://127.0.0.1:31973/fixture/support-calls");
+  await grantStepUp(context);
+  page.on("dialog", (dialog) => void dialog.accept());
+  await page.goto("/admin");
+  const alerts = page.locator(".admin-alerts");
+  await expect(alerts).toContainText("1 litige ouvert");
+  await expect(alerts).toContainText("2 webhooks en échec");
+  await expect(alerts).toContainText("1 abonnement impayé");
+  await capture(page, "admin-overview-alerts");
+  await alerts.getByRole("link", { name: "2 webhooks en échec" }).click();
+  await expect(page).toHaveURL(/\/admin\/billing\?tab=webhooks/);
+  await expect(page.getByText("Relance par Apple")).toBeVisible();
+  const replay = page.getByRole("form", { name: "Rejouer" });
+  await replay.getByLabel("Motif").fill("Stripe en panne hier");
+  await replay.getByRole("button", { name: "Rejouer" }).click();
+  await expect(replay.getByRole("status")).toHaveText("Action effectuée et auditée.");
+  await capture(page, "admin-billing-webhooks");
+  await page.getByRole("link", { name: "Litiges" }).click();
+  await page.getByRole("link", { name: "Seulement les litiges ouverts" }).click();
+  await expect(page).toHaveURL(/open=true/);
+  await expect(page.getByRole("link", { name: "owner@example.test" })).toBeVisible();
+  await expect(page.getByText("7,99 €")).toBeVisible();
+  await page.getByRole("link", { name: "Plus anciens →" }).click();
+  await expect(page).toHaveURL(/cursor=/);
+  await capture(page, "admin-billing-disputes");
+  const calls = await supportCalls(request);
+  expect(calls.map((call) => call.path)).toEqual([
+    "admin/billing/events/stripe/evt_FixtureFailed/replay",
+  ]);
+  expect(calls[0]?.body).toMatchObject({ reason: "Stripe en panne hier" });
+  const { auditQueries } = (await (
+    await request.get("http://127.0.0.1:31973/fixture/support-calls")
+  ).json()) as { auditQueries: Record<string, string>[] };
+  expect(auditQueries).toContainEqual({ path: "admin/billing/events", state: "failed" });
+  expect(auditQueries).toContainEqual({
+    path: "admin/billing/financial-events",
+    kind: "dispute",
+    open: "true",
+    cursor: "2026-10-28T00:00:00+00:00|evt_dispute",
+  });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true);
+});
+
+test("metrics show Stripe and App Store revenue, trials apart, sign-ups and downloads", async ({
+  page,
+}) => {
+  await page.goto("/admin");
+  await page.locator(".admin-sidebar").getByRole("link", { name: "Indicateurs" }).click();
+  await expect(page).toHaveURL(/\/admin\/metrics$/);
+  const kpis = page.locator(".admin-kpis");
+  await expect(kpis).toContainText("35,64 €");
+  await expect(kpis).toContainText("5 · 3 Stripe · 2 App Store");
+  await expect(kpis).toContainText("Essais en cours2");
+  await expect(kpis).toContainText("4 · 9");
+  await expect(kpis).toContainText("76,99 €");
+  await expect(page.getByText("1 abonnement(s) antérieur(s)")).toBeVisible();
+  await expect(page.getByText("Sandbox Apple actif (non payé) : 1.")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Sandbox (non payé)" })).toBeVisible();
+  await expect(page.locator(".admin-bars > div")).toHaveCount(30);
+  await expect(page.getByRole("heading", { name: "Téléchargements (48 sur 30 jours)" })).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true);
+  await capture(page, "admin-metrics");
 });

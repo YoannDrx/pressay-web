@@ -7,6 +7,7 @@ import { AdminStepUp } from "@/components/admin-step-up";
 export const dynamic = "force-dynamic";
 const navigation = [
   ["/admin", "Vue d’ensemble"],
+  ["/admin/metrics", "Indicateurs"],
   ["/admin/users", "Utilisateurs"],
   ["/admin/campaigns", "Invitations et promotions"],
   ["/admin/referrals", "Parrainages"],

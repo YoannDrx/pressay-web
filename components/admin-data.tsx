@@ -1,16 +1,24 @@
-import { pressayJSON } from "@/lib/pressay-api";
+import { pressayAPI } from "@/lib/pressay-api";
 export async function adminData<T>(
   path: string,
 ): Promise<{ data: T | null; error: React.ReactNode }> {
   try {
-    const { response, data } = await pressayJSON<T>(path);
+    const response = await pressayAPI(path);
+    const parsed = (await response.json().catch(() => null)) as
+      | (T & { error?: { code?: string } | string })
+      | null;
+    const data = response.ok ? parsed : null;
+    const code =
+      typeof parsed?.error === "object" ? parsed.error.code : undefined;
     return {
       data,
       error: data ? null : (
         <div className="account-error" role="alert">
-          {response.status === 403
-            ? "Accès refusé."
-            : "Données temporairement indisponibles."}{" "}
+          {code === "step_up_required"
+            ? "Valide ton code Authenticator dans le panneau de sécurité pour afficher ces données."
+            : response.status === 403
+              ? "Accès refusé."
+              : "Données temporairement indisponibles."}{" "}
           Référence : {response.headers.get("x-request-id") ?? "indisponible"}
         </div>
       ),

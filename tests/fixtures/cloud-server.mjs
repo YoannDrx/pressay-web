@@ -9,6 +9,10 @@ let lastToken = null;
 // Same window as the Cloud's DELETE /v1/me freshness check.
 let deletionMaxAgeSeconds = 600;
 let deletionRequests = 0;
+// Support actions received by the fake Cloud, in order.
+let supportCalls = [];
+let signOutSubject = "unknown";
+let auditQueries = [];
 function decodedClaims(header) {
   const payload = /^Bearer [^.]+\.([^.]+)\./.exec(header ?? "")?.[1];
   if (!payload) return null;
@@ -125,8 +129,119 @@ const bodies = {
     sources: [{ platform: "ios", source: "landing", count: 12 }],
   },
   "admin/referrals": { referrals: [] },
-  "admin/billing/events": { events: [] },
-  "admin/audit-log": { entries: [] },
+  "admin/billing/events": {
+    events: [
+      {
+        provider: "stripe",
+        provider_event_id: "evt_FixtureFailed",
+        event_type: "invoice.paid",
+        state: "failed",
+        error_code: "stripe_api_error",
+        received_at: "2026-10-30T08:00:00Z",
+        processed_at: "2026-10-30T08:00:01Z",
+        account_id: "00000000-0000-4000-8000-000000000001",
+      },
+      {
+        provider: "apple",
+        provider_event_id: "apple-fixture",
+        event_type: "DID_RENEW",
+        state: "failed",
+        error_code: "app_store_unavailable",
+        received_at: "2026-10-29T08:00:00Z",
+        processed_at: "2026-10-29T08:00:01Z",
+        account_id: null,
+      },
+    ],
+    nextCursor: null,
+  },
+  "admin/billing/financial-events": {
+    events: [
+      {
+        provider_event_id: "evt_dispute",
+        provider_object_id: "dp_Fixture",
+        provider_subscription_id: null,
+        kind: "dispute",
+        status: "needs_response",
+        amount_minor: 799,
+        currency: "eur",
+        full_reversal: true,
+        provider_occurred_at: "2026-10-28T00:00:00Z",
+        account_id: "00000000-0000-4000-8000-000000000001",
+        email: "owner@example.test",
+      },
+    ],
+    nextCursor: "2026-10-28T00:00:00+00:00|evt_dispute",
+  },
+  "admin/metrics": {
+    subscribers: [
+      { provider: "app_store", billing_interval: "month", status: "active", environment: "Sandbox", count: 1 },
+      { provider: "app_store", billing_interval: "year", status: "active", environment: "Production", count: 2 },
+      { provider: "stripe", billing_interval: "month", status: "active", environment: "Production", count: 3 },
+      { provider: "stripe", billing_interval: "month", status: "trialing", environment: "Production", count: 2 },
+    ],
+    mrr: [
+      { provider: "app_store", currency: "eur", mrr_minor: 1167, arr_minor: 14004, subscriptions: 2, estimated_subscriptions: 1 },
+      { provider: "stripe", currency: "eur", mrr_minor: 2397, arr_minor: 28764, subscriptions: 3, estimated_subscriptions: 0 },
+    ],
+    signups: Array.from({ length: 30 }, (_, index) => ({
+      day: new Date(Date.UTC(2026, 9, 2 + index)).toISOString().slice(0, 10),
+      count: index % 7 === 0 ? 3 : index % 3,
+    })),
+    activeAccounts: { active_7d: 4, active_30d: 9 },
+    grants: [
+      { source: "invitation", count: 1 },
+      { source: "support", count: 2 },
+    ],
+    collectedThisMonth: [
+      { currency: "eur", paid_minor: 7699, refunded_minor: 799, invoices: 2 },
+    ],
+    downloads: [
+      { platform: "macos", app_version: "1.4.0", last_7d: 12, last_30d: 40 },
+      { platform: "windows", app_version: "1.4.0", last_7d: 3, last_30d: 8 },
+    ],
+    generatedAt: "2026-10-31T06:00:00Z",
+  },
+  "admin/alerts": {
+    failed_webhooks: 2,
+    failed_webhooks_24h: 1,
+    open_disputes: 1,
+    unpaid_subscriptions: 1,
+    duplicate_subscriptions: 0,
+    refunds_24h: 0,
+    failed_payments_24h: 1,
+    checkedAt: "2026-10-31T06:00:00Z",
+  },
+  "admin/audit-log": {
+    entries: [
+      {
+        id: "120",
+        actor_id: me.accountId,
+        actor_email: "owner@example.test",
+        action: "grant.create",
+        target_id: me.accountId,
+        target_account_id: me.accountId,
+        reason: "Beta tester",
+        result: "succeeded",
+        request_id: "req-audit-fixture",
+        details: { grantId: "00000000-0000-4000-8000-0000000000a1", days: 30 },
+        created_at: "2026-10-30T00:00:00Z",
+      },
+      {
+        id: "119",
+        actor_id: null,
+        actor_email: null,
+        action: "launch_gate.updated",
+        target_id: "direct/tax",
+        target_account_id: null,
+        reason: "Checked",
+        result: "failed",
+        request_id: "req-audit-gate",
+        details: { errorCode: "gate_not_found" },
+        created_at: "2026-10-29T00:00:00Z",
+      },
+    ],
+    nextCursor: "119",
+  },
   "admin/health": {
     gates: [],
     jobs: [],
@@ -225,7 +340,17 @@ function adminUserDetail(subject) {
       },
     ],
     deletion: null,
-    grants: [],
+    grants: [
+      {
+        id: "00000000-0000-4000-8000-0000000000a1",
+        source: "support",
+        starts_at: "2026-10-01T00:00:00Z",
+        ends_at: "2027-01-01T00:00:00Z",
+        revoked_at: null,
+        reason: "Beta tester",
+        created_by: me.accountId,
+      },
+    ],
     referrals: [],
     audit: [
       {
@@ -237,9 +362,23 @@ function adminUserDetail(subject) {
         result: "succeeded",
         request_id: "req-fixture",
         created_at: "2026-10-03T00:00:00Z",
+        target_account_id: me.accountId,
+        details: { days: 30, endsAt: "2027-01-01T00:00:00Z" },
       },
     ],
     auditReads: { count: 2, lastAt: "2026-10-31T00:00:00Z" },
+    providerEvents: [
+      {
+        provider: "stripe",
+        provider_event_id: "evt_FixtureFailed",
+        event_type: "invoice.paid",
+        state: "failed",
+        error_code: "stripe_api_error",
+        received_at: "2026-10-30T08:00:00Z",
+        processed_at: "2026-10-30T08:00:01Z",
+        account_id: me.accountId,
+      },
+    ],
   };
 }
 http
@@ -318,6 +457,79 @@ http
         "Content-Disposition",
         'attachment; filename="pressay-cloud-export.json"',
       );
+    }
+    if (path === "/fixture/support-calls") {
+      if (req.method === "DELETE") {
+        supportCalls = [];
+        auditQueries = [];
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ calls: supportCalls, auditQueries }));
+      return;
+    }
+    if (path === "/fixture/sign-out-subject") {
+      let raw = "";
+      req.on("data", (chunk) => (raw += chunk));
+      req.on("end", () => {
+        signOutSubject = raw;
+        res.end("ok");
+      });
+      return;
+    }
+    if (
+      ["admin/audit-log", "admin/billing/events", "admin/billing/financial-events"].includes(
+        path,
+      )
+    )
+      auditQueries.push({ path, ...Object.fromEntries(requestURL.searchParams) });
+    if (
+      req.method === "POST" &&
+      (/^admin\/(users\/[0-9a-f-]{36}\/(grants|deletion)|grants\/[0-9a-f-]{36}\/extend|devices\/[0-9a-f-]{36}\/(revoke|restore)|audit\/external|billing\/events\/stripe\/[A-Za-z0-9_-]+\/replay)$/.test(
+        path,
+      ) ||
+        /^devices\/[0-9a-f-]{36}\/restore$/.test(path))
+    ) {
+      let raw = "";
+      req.on("data", (chunk) => (raw += chunk));
+      req.on("end", () => {
+        const body = raw ? JSON.parse(raw) : null;
+        supportCalls.push({ path, body });
+        res.setHeader("Content-Type", "application/json");
+        if (path === "admin/audit/external") {
+          res.end(JSON.stringify({ recorded: true, authUserId: signOutSubject }));
+          return;
+        }
+        if (path.startsWith("devices/")) {
+          res.end(JSON.stringify({ restored: true }));
+          return;
+        }
+        res.statusCode = path.endsWith("/grants")
+          ? 201
+          : path.endsWith("/deletion")
+            ? 202
+            : 200;
+        res.end(JSON.stringify({ ok: true }));
+      });
+      return;
+    }
+    if (path === "devices" && requestURL.searchParams.get("include") === "revoked") {
+      res.end(
+        JSON.stringify({
+          ...bodies.devices,
+          revokedDevices: [
+            {
+              id: "00000000-0000-4000-8000-0000000000d3",
+              displayName: "Old PC",
+              platform: "windows",
+              appVariant: "direct",
+              appVersion: "1.3.0",
+              lastSeenAt: "2026-09-10T09:00:00Z",
+              revokedAt: "2026-09-11T00:00:00Z",
+            },
+          ],
+        }),
+      );
+      return;
     }
     if (/^admin\/users\/[0-9a-f-]{36}$/.test(path)) {
       if (requestURL.searchParams.get("include") === "identity")
