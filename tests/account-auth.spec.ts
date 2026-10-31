@@ -1296,3 +1296,74 @@ test("metrics show Stripe and App Store revenue, trials apart, sign-ups and down
   ).toBe(true);
   await capture(page, "admin-metrics");
 });
+
+test("metrics show churn, cohort conversion, trials, download breakdowns and audited CSV exports", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.delete("http://127.0.0.1:31973/fixture/support-calls");
+  await page.goto("/admin/metrics");
+  const advanced = page.locator(".admin-advanced");
+  await expect(advanced.getByRole("heading", { name: "Churn mensuel" })).toBeVisible();
+  // September (the last complete month of the fixture): 1 stop out of 4.
+  await expect(advanced.locator(".admin-churn-last")).toContainText(/sept\. 2026\) :\s25\s%/);
+  await expect(advanced.getByText(/Historique des statuts d’abonnement depuis le/)).toBeVisible();
+  // August cohort: 5 of 20 paid.
+  await expect(
+    advanced.getByRole("row", { name: /août 2026 20 5 25\s%/ }),
+  ).toBeVisible();
+  await expect(advanced.getByRole("cell", { name: "launch-week" })).toBeVisible();
+  await expect(
+    advanced.getByRole("heading", { name: "Téléchargements détaillés (30 jours)" }),
+  ).toBeVisible();
+  await page.getByLabel("Période").selectOption("24");
+  await page.getByLabel("Téléchargements sur").selectOption("90");
+  await page.getByRole("button", { name: "Afficher" }).click();
+  await expect(page).toHaveURL(/months=24&days=90/);
+
+  // Without step-up the export opens the security panel instead.
+  await page.getByRole("button", { name: "Churn (CSV)" }).click();
+  // The export route compiles on first use in development.
+  await expect(
+    page.getByText("Saisis ton code Authenticator dans le panneau ouvert, puis réessaie."),
+  ).toBeVisible({ timeout: 30_000 });
+  await grantStepUp(context);
+  await page.reload();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Churn (CSV)" }).click();
+  expect((await download).suggestedFilename()).toBe("pressay-churn-2026-10-31.csv");
+  await expect(page.getByText("Export téléchargé et audité.")).toBeVisible();
+  const { auditQueries } = (await (
+    await request.get("http://127.0.0.1:31973/fixture/support-calls")
+  ).json()) as { auditQueries: Record<string, string>[] };
+  expect(auditQueries).toContainEqual({
+    path: "admin/metrics/advanced",
+    months: "24",
+    days: "90",
+  });
+  expect(auditQueries.filter((query) => query.path.startsWith("admin/export/"))).toEqual([
+    { path: "admin/export/churn.csv", months: "24" },
+    { path: "admin/export/churn.csv", months: "24" },
+  ]);
+
+  // The site refuses malformed or cross-site export requests before the Cloud.
+  const origin = { Origin: "http://127.0.0.1:31972" };
+  for (const path of [
+    "/api/admin/export/churn.csv?days=30",
+    "/api/admin/export/accounts.csv?months=12",
+    "/api/admin/export/churn.csv?months=12&x=1",
+  ])
+    expect((await page.request.post(path, { headers: origin })).status(), path).toBe(422);
+  expect(
+    (
+      await page.request.post("/api/admin/export/churn.csv?months=12", {
+        headers: { Origin: "https://attacker.example" },
+      })
+    ).status(),
+  ).toBe(403);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true);
+  await capture(page, "admin-metrics-advanced");
+});

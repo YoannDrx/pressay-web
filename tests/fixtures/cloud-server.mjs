@@ -201,6 +201,42 @@ const bodies = {
     ],
     generatedAt: "2026-10-31T06:00:00Z",
   },
+  "admin/metrics/advanced": {
+    months: 12,
+    days: 30,
+    historyStartedAt: "2026-10-31T06:00:00Z",
+    churn: [
+      { month: "2026-08", paying_start: 0, new_paying: 4, churned: 0 },
+      { month: "2026-09", paying_start: 4, new_paying: 3, churned: 1 },
+      { month: "2026-10", paying_start: 6, new_paying: 2, churned: 0 },
+    ],
+    cohorts: [
+      { month: "2026-08", signups: 20, converted: 5, converted_30d: 4, trials: 6 },
+      { month: "2026-09", signups: 16, converted: 2, converted_30d: 2, trials: 3 },
+      { month: "2026-10", signups: 9, converted: 0, converted_30d: 0, trials: 2 },
+    ],
+    trials: [
+      { month: "2026-08", started: 6, converted: 3, ended: 3, running: 0 },
+      { month: "2026-09", started: 3, converted: 1, ended: 1, running: 1 },
+      { month: "2026-10", started: 2, converted: 0, ended: 0, running: 2 },
+    ],
+    downloads: {
+      platforms: [
+        { platform: "macos", count: 40 },
+        { platform: "windows", count: 8 },
+      ],
+      versions: [
+        { platform: "macos", app_version: "1.4.0", count: 40 },
+        { platform: "windows", app_version: "1.4.0", count: 8 },
+      ],
+      sources: [
+        { source: "site", count: 44 },
+        { source: "newsletter", count: 4 },
+      ],
+      campaigns: [{ campaign: "launch-week", count: 4 }],
+    },
+    generatedAt: "2026-10-31T06:00:00Z",
+  },
   "admin/alerts": {
     failed_webhooks: 2,
     failed_webhooks_24h: 1,
@@ -587,6 +623,26 @@ http
         res.statusCode = 202;
         res.end(JSON.stringify({ status: "registered" }));
       });
+      return;
+    }
+    if (path === "admin/metrics/advanced")
+      auditQueries.push({ path, ...Object.fromEntries(requestURL.searchParams) });
+    if (/^admin\/export\/[a-z]+\.csv$/.test(path)) {
+      auditQueries.push({ path, ...Object.fromEntries(requestURL.searchParams) });
+      // Contract: exports are step-up reads.
+      const stepUpAt = decodedClaims(req.headers.authorization)?.pressay_step_up_at;
+      if (typeof stepUpAt !== "number" || stepUpAt < Date.now() / 1000 - 600) {
+        res.statusCode = 403;
+        res.end(JSON.stringify({ error: { code: "step_up_required" } }));
+        return;
+      }
+      const dataset = path.slice("admin/export/".length, -".csv".length);
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="pressay-${dataset}-2026-10-31.csv"`,
+      );
+      res.end('month,paying_start,new_paying,churned,churn_rate\r\n"2026-10","6","2","0","0.0000"\r\n');
       return;
     }
     if (path === "admin/waitlist/export") {
