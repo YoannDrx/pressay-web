@@ -163,6 +163,35 @@ const bodies = {
     ],
     nextCursor: "2026-10-28T00:00:00+00:00|evt_dispute",
   },
+  "admin/metrics": {
+    subscribers: [
+      { provider: "app_store", billing_interval: "month", status: "active", environment: "Sandbox", count: 1 },
+      { provider: "app_store", billing_interval: "year", status: "active", environment: "Production", count: 2 },
+      { provider: "stripe", billing_interval: "month", status: "active", environment: "Production", count: 3 },
+      { provider: "stripe", billing_interval: "month", status: "trialing", environment: "Production", count: 2 },
+    ],
+    mrr: [
+      { provider: "app_store", currency: "eur", mrr_minor: 1167, arr_minor: 14004, subscriptions: 2, estimated_subscriptions: 1 },
+      { provider: "stripe", currency: "eur", mrr_minor: 2397, arr_minor: 28764, subscriptions: 3, estimated_subscriptions: 0 },
+    ],
+    signups: Array.from({ length: 30 }, (_, index) => ({
+      day: new Date(Date.UTC(2026, 9, 2 + index)).toISOString().slice(0, 10),
+      count: index % 7 === 0 ? 3 : index % 3,
+    })),
+    activeAccounts: { active_7d: 4, active_30d: 9 },
+    grants: [
+      { source: "invitation", count: 1 },
+      { source: "support", count: 2 },
+    ],
+    collectedThisMonth: [
+      { currency: "eur", paid_minor: 7699, refunded_minor: 799, invoices: 2 },
+    ],
+    downloads: [
+      { platform: "macos", app_version: "1.4.0", last_7d: 12, last_30d: 40 },
+      { platform: "windows", app_version: "1.4.0", last_7d: 3, last_30d: 8 },
+    ],
+    generatedAt: "2026-10-31T06:00:00Z",
+  },
   "admin/alerts": {
     failed_webhooks: 2,
     failed_webhooks_24h: 1,

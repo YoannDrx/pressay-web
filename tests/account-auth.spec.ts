@@ -160,6 +160,7 @@ test("admin routes render real contract fixtures and remain within the mobile vi
   ).toBe("en");
   for (const route of [
     "/admin",
+    "/admin/metrics",
     "/admin/users",
     "/admin/campaigns",
     "/admin/referrals",
@@ -1106,4 +1107,27 @@ test("billing tabs show disputes and failed webhooks, replay a Stripe event and 
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
   ).toBe(true);
+});
+
+test("metrics show Stripe and App Store revenue, trials apart, sign-ups and downloads", async ({
+  page,
+}) => {
+  await page.goto("/admin");
+  await page.locator(".admin-sidebar").getByRole("link", { name: "Indicateurs" }).click();
+  await expect(page).toHaveURL(/\/admin\/metrics$/);
+  const kpis = page.locator(".admin-kpis");
+  await expect(kpis).toContainText("35,64 €");
+  await expect(kpis).toContainText("5 · 3 Stripe · 2 App Store");
+  await expect(kpis).toContainText("Essais en cours2");
+  await expect(kpis).toContainText("4 · 9");
+  await expect(kpis).toContainText("76,99 €");
+  await expect(page.getByText("1 abonnement(s) antérieur(s)")).toBeVisible();
+  await expect(page.getByText("Sandbox Apple actif (non payé) : 1.")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Sandbox (non payé)" })).toBeVisible();
+  await expect(page.locator(".admin-bars > div")).toHaveCount(30);
+  await expect(page.getByRole("heading", { name: "Téléchargements (48 sur 30 jours)" })).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true);
+  await capture(page, "admin-metrics");
 });
