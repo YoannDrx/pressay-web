@@ -1,8 +1,23 @@
 import { AdminHeading } from "@/components/admin-heading";
-import { adminData, AdminTable } from "@/components/admin-data";
-import { money } from "@/lib/admin-format";
+import { adminData, AdminTable, adminDate } from "@/components/admin-data";
+import { money, platformLabel } from "@/lib/admin-format";
 import { metricsSummary } from "@/lib/admin-metrics";
-import type { AdminMetrics } from "@/lib/operations-contract";
+import { AdminCsvExport } from "@/components/admin-csv-export";
+import { ADMIN_LOCALE, adminMessages, fill } from "@/lib/admin-i18n";
+import { metricsMessages } from "@/lib/admin-messages/metrics";
+import {
+  exportRange,
+  metricDayOptions,
+  metricExportDatasets,
+  metricMonthOptions,
+  metricPeriod,
+  monthLabel,
+  percent,
+} from "@/lib/admin-analytics";
+import type {
+  AdminAdvancedMetrics,
+  AdminMetrics,
+} from "@/lib/operations-contract";
 
 const providers: Record<string, string> = { stripe: "Stripe", app_store: "App Store" };
 const statuses: Record<string, string> = {
@@ -20,8 +35,18 @@ const grantSources: Record<string, string> = {
 const amounts = (rows: { currency: string; amountMinor: number }[]) =>
   rows.length ? rows.map((row) => money(row.amountMinor, row.currency)).join(" + ") : "0";
 
-export default async function Page() {
-  const { data: m, error } = await adminData<AdminMetrics>("admin/metrics");
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const period = metricPeriod(await searchParams);
+  const [{ data: m, error }, advanced] = await Promise.all([
+    adminData<AdminMetrics>("admin/metrics"),
+    adminData<AdminAdvancedMetrics>(
+      `admin/metrics/advanced?months=${period.months}&days=${period.days}`,
+    ),
+  ]);
   const s = m ? metricsSummary(m) : null;
   return (
     <>
@@ -147,6 +172,166 @@ export default async function Page() {
           />
         </>
       ) : null}
+      <AdvancedMetrics data={advanced.data} period={period} />
     </>
+  );
+}
+
+function AdvancedMetrics({
+  data,
+  period,
+}: {
+  data: AdminAdvancedMetrics | null;
+  period: { months: number; days: number };
+}) {
+  const t = adminMessages(metricsMessages);
+  const locale = ADMIN_LOCALE;
+  const lastChurn = data?.churn.at(-2);
+  return (
+    <section className="admin-advanced" aria-labelledby="advanced-metrics">
+      <form className="admin-filters admin-period" method="get">
+        <label>
+          {t.period.label}
+          <select name="months" defaultValue={String(period.months)}>
+            {metricMonthOptions.map((count) => (
+              <option key={count} value={count}>
+                {fill(t.period.months, { count })}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t.period.days}
+          <select name="days" defaultValue={String(period.days)}>
+            {metricDayOptions.map((count) => (
+              <option key={count} value={count}>
+                {fill(t.period.daysOption, { count })}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button className="button button-small" type="submit">
+          {t.period.apply}
+        </button>
+      </form>
+      {!data ? (
+        <p className="account-error" role="alert">
+          {t.unavailable}
+        </p>
+      ) : (
+        <>
+          <p className="admin-search-kind">
+            {data.historyStartedAt
+              ? fill(t.history.since, { date: adminDate(data.historyStartedAt) })
+              : t.history.empty}
+          </p>
+          <h2 id="advanced-metrics">{t.churn.title}</h2>
+          <p>{t.churn.detail}</p>
+          {lastChurn ? (
+            <p className="admin-churn-last">
+              {t.churn.last} ({monthLabel(lastChurn.month, locale)}) :{" "}
+              <strong>
+                {percent(lastChurn.churned, lastChurn.paying_start, locale)}
+              </strong>
+            </p>
+          ) : null}
+          <AdminTable
+            headers={t.churn.headers}
+            rows={data.churn.map((row) => [
+              monthLabel(row.month, locale),
+              row.paying_start,
+              row.new_paying,
+              row.churned,
+              percent(row.churned, row.paying_start, locale),
+            ])}
+          />
+          <h2>{t.cohorts.title}</h2>
+          <p>{t.cohorts.detail}</p>
+          <AdminTable
+            headers={t.cohorts.headers}
+            rows={data.cohorts.map((row) => [
+              monthLabel(row.month, locale),
+              row.signups,
+              row.converted,
+              percent(row.converted, row.signups, locale),
+              `${row.converted_30d} · ${percent(row.converted_30d, row.signups, locale)}`,
+              row.trials,
+            ])}
+          />
+          <h2>{t.trials.title}</h2>
+          <p>{t.trials.detail}</p>
+          <AdminTable
+            headers={t.trials.headers}
+            rows={data.trials.map((row) => [
+              monthLabel(row.month, locale),
+              row.started,
+              row.converted,
+              row.ended,
+              row.running,
+              percent(row.converted, row.converted + row.ended, locale),
+            ])}
+          />
+          <h2>{fill(t.downloads.title, { days: data.days })}</h2>
+          <div className="admin-grid-two">
+            <div>
+              <h3>{t.downloads.platforms}</h3>
+              <AdminTable
+                headers={[t.downloads.headers.platform, t.downloads.headers.count]}
+                rows={data.downloads.platforms.map((row) => [
+                  platformLabel(row.platform),
+                  row.count,
+                ])}
+              />
+            </div>
+            <div>
+              <h3>{t.downloads.versions}</h3>
+              <AdminTable
+                headers={[
+                  t.downloads.headers.platform,
+                  t.downloads.headers.version,
+                  t.downloads.headers.count,
+                ]}
+                rows={data.downloads.versions.map((row) => [
+                  platformLabel(row.platform),
+                  row.app_version,
+                  row.count,
+                ])}
+              />
+            </div>
+            <div>
+              <h3>{t.downloads.sources}</h3>
+              <AdminTable
+                headers={[t.downloads.headers.source, t.downloads.headers.count]}
+                rows={data.downloads.sources.map((row) => [row.source, row.count])}
+              />
+            </div>
+            <div>
+              <h3>{t.downloads.campaigns}</h3>
+              <AdminTable
+                headers={[t.downloads.headers.campaign, t.downloads.headers.count]}
+                rows={data.downloads.campaigns.map((row) => [
+                  row.campaign,
+                  row.count,
+                ])}
+              />
+            </div>
+          </div>
+        </>
+      )}
+      <h2>{t.exports.title}</h2>
+      <p>{t.exports.detail}</p>
+      <div className="admin-exports">
+        {metricExportDatasets.map((dataset) => (
+          <AdminCsvExport
+            key={dataset}
+            href={`/api/admin/export/${dataset}.csv?${exportRange(dataset)}=${
+              exportRange(dataset) === "months" ? period.months : period.days
+            }`}
+            label={t.exports[dataset]}
+            messages={t.exports}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
