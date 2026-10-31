@@ -531,6 +531,31 @@ http
       );
       return;
     }
+    if (/^admin\/users\/[0-9a-f-]{36}\/export$/.test(path)) {
+      auditQueries.push({ path, ...Object.fromEntries(requestURL.searchParams) });
+      // Contract: the access-request export is a step-up read.
+      const claims = decodedClaims(req.headers.authorization);
+      if (
+        typeof claims?.pressay_step_up_at !== "number" ||
+        claims.pressay_step_up_at < Date.now() / 1000 - 600
+      ) {
+        res.statusCode = 403;
+        res.end(JSON.stringify({ error: { code: "step_up_required" } }));
+        return;
+      }
+      res.end(
+        JSON.stringify({
+          format: "pressay-cloud-support-export/1",
+          account: { id: me.accountId, status: "active" },
+          contact: { email: me.email },
+          waitlists: [{ platform: "ios", locale: "fr", source: "landing" }],
+          identitySubject: claims.sub,
+          supportActions: [{ action: "grant.create", result: "succeeded", reason: "Beta tester" }],
+          reservedInvitations: [],
+        }),
+      );
+      return;
+    }
     if (/^admin\/users\/[0-9a-f-]{36}$/.test(path)) {
       if (requestURL.searchParams.get("include") === "identity")
         identityReads += 1;

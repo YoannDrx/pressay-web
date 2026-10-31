@@ -43,15 +43,16 @@ const iso = (value: unknown) =>
  * Cloud account. These live only in the web database.
  *
  * Call it only with a record the Cloud has just returned for
- * `admin/users/:id?include=identity`: that response proves the owner role
- * and a step-up less than ten minutes old, and the Cloud has audited the read
- * as `admin.user.identity.read`. The step-up is checked here again so a
+ * `admin/users/:id?include=identity` or `admin/users/:id/export?include=identity`:
+ * that response proves the administrator role and a step-up less than ten
+ * minutes old, and the Cloud has audited the read (`admin.user.identity.read`,
+ * or `admin.user.export` with `siteIdentity`). The step-up is checked here again so a
  * misuse of this module cannot read identities without it. Never reads
  * secrets (tokens, credentials, TOTP seeds, passkey keys) or IP addresses.
  */
-export async function readAdminIdentity(
-  cloudRecord: Pick<AdminUserDetail, "account">,
-): Promise<AdminIdentity> {
+export async function readAdminIdentity(cloudRecord: {
+  account: Pick<AdminUserDetail["account"], "authUserId">;
+}): Promise<AdminIdentity> {
   const userId = cloudRecord.account.authUserId;
   if (identityProvider() !== "better-auth" || !userId)
     return { status: "not_configured" };

@@ -271,6 +271,85 @@ test("admin customer record shows billing, devices and site identity only after 
     fullPage: true,
   });
 });
+test("support exports a customer's data for an access request with the site sign-in data, after step-up", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.delete("http://127.0.0.1:31973/fixture/support-calls");
+  await page.goto(`/admin/users/${CUSTOMER}`);
+  const panel = page.locator(".admin-actions-section", {
+    hasText: "Demande d’accès (RGPD)",
+  });
+  // Without step-up the export opens the security panel instead.
+  await panel.getByRole("button", { name: "Exporter les données (JSON)" }).click();
+  // The export route compiles on first use in development.
+  await expect(panel.getByRole("status")).toHaveText(
+    "Saisis ton code Authenticator dans le panneau ouvert, puis réessaie.",
+    { timeout: 30_000 },
+  );
+  const session = await grantStepUp(context);
+  await pool.query(
+    `INSERT INTO auth_accounts(id,"accountId","providerId","userId","createdAt","updatedAt")
+     VALUES($1,$2,'apple',$3,now(),now())`,
+    [randomUUID(), randomUUID(), session.userId],
+  );
+  await page.reload();
+  const download = page.waitForEvent("download");
+  await panel.getByRole("button", { name: "Exporter les données (JSON)" }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe(`pressay-account-${CUSTOMER}.json`);
+  const { readFile } = await import("node:fs/promises");
+  const exported = JSON.parse(await readFile((await file.path())!, "utf8")) as {
+    identitySubject: string;
+    contact: { email: string };
+    supportActions: unknown[];
+    site: {
+      format: string;
+      exists: boolean;
+      providers: { providerId: string }[];
+      twoFactorEnabled: boolean;
+      sessions: unknown[];
+    };
+  };
+  expect(exported.identitySubject).toBe(session.userId);
+  expect(exported.contact.email).toBe("owner@example.test");
+  expect(exported.supportActions).toHaveLength(1);
+  expect(exported.site).toMatchObject({
+    format: "pressay-web-identity/1",
+    exists: true,
+    twoFactorEnabled: false,
+  });
+  expect(exported.site.providers.map((p) => p.providerId)).toContain("apple");
+  expect(exported.site.sessions.length).toBeGreaterThan(0);
+  // Secrets and network addresses never leave the site.
+  expect(JSON.stringify(exported)).not.toMatch(/token|secret|127\.0\.0\.1/i);
+  await expect(panel.getByRole("status")).toHaveText("Export téléchargé et audité.");
+  const { auditQueries } = (await (
+    await request.get("http://127.0.0.1:31973/fixture/support-calls")
+  ).json()) as { auditQueries: Record<string, string>[] };
+  expect(
+    auditQueries.filter((query) => query.path.endsWith("/export")),
+  ).toEqual([
+    { path: `admin/users/${CUSTOMER}/export`, include: "identity" },
+    { path: `admin/users/${CUSTOMER}/export`, include: "identity" },
+  ]);
+  const origin = { Origin: "http://127.0.0.1:31972" };
+  expect(
+    (await page.request.post("/api/admin/users/not-an-id/export", { headers: origin })).status(),
+  ).toBe(422);
+  expect(
+    (
+      await page.request.post(`/api/admin/users/${CUSTOMER}/export`, {
+        headers: { Origin: "https://attacker.example" },
+      })
+    ).status(),
+  ).toBe(403);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true);
+  await capture(page, "admin-customer-export");
+});
 test("waitlists: consented sign-up relayed with a vouched address, counters and audited CSV export", async ({
   page,
   context,
