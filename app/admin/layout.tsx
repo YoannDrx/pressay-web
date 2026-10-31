@@ -11,6 +11,7 @@ const navigation = [
   ["/admin/users", "Utilisateurs"],
   ["/admin/campaigns", "Invitations et promotions"],
   ["/admin/referrals", "Parrainages"],
+  ["/admin/waitlist", "Listes d’attente"],
   ["/admin/billing", "Facturation"],
   ["/admin/health", "Santé et lancement"],
   ["/admin/audit", "Journal d’audit"],
