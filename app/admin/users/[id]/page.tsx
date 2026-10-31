@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminHeading } from "@/components/admin-heading";
 import { AdminActionForm } from "@/components/admin-action-form";
+import { ProviderEventAction } from "@/components/admin-provider-event-action";
 import { adminData, AdminTable, adminDate } from "@/components/admin-data";
 import { readAdminIdentity, type AdminIdentity } from "@/lib/admin-identity";
 import {
@@ -264,6 +265,28 @@ export default async function Page({
               />,
             ])}
           />
+
+          {d.providerEvents?.length ? (
+            <>
+              <h2>Événements Stripe et Apple de ce compte</h2>
+              <AdminTable
+                headers={["Reçu", "Fournisseur", "Type", "État", "Erreur", "Action"]}
+                rows={d.providerEvents.map((e) => [
+                  adminDate(e.received_at),
+                  e.provider === "stripe" ? "Stripe" : "Apple",
+                  e.event_type,
+                  <span
+                    key="state"
+                    className={e.state === "failed" ? "admin-danger" : ""}
+                  >
+                    {e.state}
+                  </span>,
+                  e.error_code ?? "—",
+                  <ProviderEventAction key="action" event={e} />,
+                ])}
+              />
+            </>
+          ) : null}
 
           <h2>
             Appareils ({activeDevices.length} / 3 actifs, {d.devices.length} au

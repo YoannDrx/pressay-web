@@ -1,5 +1,8 @@
 import { AdminHeading } from "@/components/admin-heading";
+import Link from "next/link";
 import { adminData, AdminTable } from "@/components/admin-data";
+import { alertItems } from "@/lib/admin-billing";
+import type { AdminAlerts } from "@/lib/operations-contract";
 type Overview = {
   catalogueMRRMinor: number;
   users: number;
@@ -21,7 +24,11 @@ type Overview = {
   }[];
 };
 export default async function Page() {
-  const { data: d, error } = await adminData<Overview>("admin/overview");
+  const [{ data: d, error }, { data: alerts }] = await Promise.all([
+    adminData<Overview>("admin/overview"),
+    adminData<AdminAlerts>("admin/alerts"),
+  ]);
+  const attention = alertItems(alerts, d?.failed_webhooks ?? 0);
   return (
     <>
       <AdminHeading
@@ -30,6 +37,24 @@ export default async function Page() {
         detail="Comptes, abonnements et consommation serveur. Le dernier contact d’un appareil n’est pas une mesure de dictée."
       />
       {error}
+      {d ? (
+        attention.length ? (
+          <section className="admin-alerts" role="alert">
+            <h2>À traiter</h2>
+            <ul>
+              {attention.map((item) => (
+                <li key={item.key}>
+                  {item.href ? <Link href={item.href}>{item.label}</Link> : item.label}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : (
+          <p className="admin-alerts-ok">
+            Aucun webhook en échec, litige ouvert, impayé ni doublon d’abonnement.
+          </p>
+        )
+      ) : null}
       {d ? (
         <>
           <section className="admin-kpis">

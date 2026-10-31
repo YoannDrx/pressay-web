@@ -1028,8 +1028,9 @@ test("audit ledger shows full authors and details, filters and pages under step-
   const { auditQueries } = (await (
     await request.get("http://127.0.0.1:31973/fixture/support-calls")
   ).json()) as { auditQueries: Record<string, string>[] };
-  expect(auditQueries[0]).toEqual({ reads: "exclude" });
+  expect(auditQueries[0]).toEqual({ path: "admin/audit-log", reads: "exclude" });
   expect(auditQueries.at(-1)).toEqual({
+    path: "admin/audit-log",
     action: "grant",
     target: CUSTOMER,
     from: "2026-10-01",
@@ -1055,4 +1056,54 @@ test("the account lists revoked devices and restores one", async ({ page, reques
     .poll(async () => (await supportCalls(request)).map((call) => call.path))
     .toEqual(["devices/00000000-0000-4000-8000-0000000000d3/restore"]);
   await capture(page, "account-revoked-devices");
+});
+
+test("billing tabs show disputes and failed webhooks, replay a Stripe event and alert on the overview", async ({
+  page,
+  context,
+  request,
+}) => {
+  await request.delete("http://127.0.0.1:31973/fixture/support-calls");
+  await grantStepUp(context);
+  page.on("dialog", (dialog) => void dialog.accept());
+  await page.goto("/admin");
+  const alerts = page.locator(".admin-alerts");
+  await expect(alerts).toContainText("1 litige ouvert");
+  await expect(alerts).toContainText("2 webhooks en échec");
+  await expect(alerts).toContainText("1 abonnement impayé");
+  await capture(page, "admin-overview-alerts");
+  await alerts.getByRole("link", { name: "2 webhooks en échec" }).click();
+  await expect(page).toHaveURL(/\/admin\/billing\?tab=webhooks/);
+  await expect(page.getByText("Relance par Apple")).toBeVisible();
+  const replay = page.getByRole("form", { name: "Rejouer" });
+  await replay.getByLabel("Motif").fill("Stripe en panne hier");
+  await replay.getByRole("button", { name: "Rejouer" }).click();
+  await expect(replay.getByRole("status")).toHaveText("Action effectuée et auditée.");
+  await capture(page, "admin-billing-webhooks");
+  await page.getByRole("link", { name: "Litiges" }).click();
+  await page.getByRole("link", { name: "Seulement les litiges ouverts" }).click();
+  await expect(page).toHaveURL(/open=true/);
+  await expect(page.getByRole("link", { name: "owner@example.test" })).toBeVisible();
+  await expect(page.getByText("7,99 €")).toBeVisible();
+  await page.getByRole("link", { name: "Plus anciens →" }).click();
+  await expect(page).toHaveURL(/cursor=/);
+  await capture(page, "admin-billing-disputes");
+  const calls = await supportCalls(request);
+  expect(calls.map((call) => call.path)).toEqual([
+    "admin/billing/events/stripe/evt_FixtureFailed/replay",
+  ]);
+  expect(calls[0]?.body).toMatchObject({ reason: "Stripe en panne hier" });
+  const { auditQueries } = (await (
+    await request.get("http://127.0.0.1:31973/fixture/support-calls")
+  ).json()) as { auditQueries: Record<string, string>[] };
+  expect(auditQueries).toContainEqual({ path: "admin/billing/events", state: "failed" });
+  expect(auditQueries).toContainEqual({
+    path: "admin/billing/financial-events",
+    kind: "dispute",
+    open: "true",
+    cursor: "2026-10-28T00:00:00+00:00|evt_dispute",
+  });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true);
 });

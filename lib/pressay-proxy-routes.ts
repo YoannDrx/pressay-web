@@ -37,6 +37,10 @@ const relayedRoutes: ReadonlyArray<{
     methods: ["POST"],
     pattern: new RegExp(`^admin/devices/${ID}/(revoke|restore)$`),
   },
+  {
+    methods: ["POST"],
+    pattern: new RegExp(`^admin/billing/events/stripe/${ID}/replay$`),
+  },
   // admin/audit/external is called server-side only (sign-out everywhere).
   { methods: ["PATCH"], pattern: new RegExp(`^admin/gates/${ID}/${ID}$`) },
   { methods: ["POST"], pattern: /^admin\/rewards\/process$/ },
