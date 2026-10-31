@@ -1,5 +1,4 @@
 import { SessionNavigation } from "@/components/session-navigation";
-import { accountLocale } from "@/lib/account-locale";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { pressayAPI } from "@/lib/pressay-api";
@@ -66,7 +65,7 @@ export default async function Layout({
             identity.stepUpAt ? (identity.stepUpAt + 600) * 1000 : 0
           }
         />
-        <SessionNavigation locale={await accountLocale()} />
+        <SessionNavigation locale="fr" rememberLocale={false} />
         <Link href="/account">← Mon compte</Link>
       </aside>
       <main className="admin-main">{children}</main>

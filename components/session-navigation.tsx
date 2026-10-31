@@ -3,7 +3,18 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import type { Locale } from "@/lib/content";
-export function SessionNavigation({ locale }: { locale: Locale }) {
+/**
+ * `rememberLocale` stores the shown language as the visitor's preference.
+ * The administration is French-only, so it shows the menu in French without
+ * overwriting the language chosen for the public site and the account.
+ */
+export function SessionNavigation({
+  locale,
+  rememberLocale = true,
+}: {
+  locale: Locale;
+  rememberLocale?: boolean;
+}) {
   const [state, setState] = useState<{
     authenticated: boolean;
     admin: boolean;
@@ -48,7 +59,8 @@ export function SessionNavigation({ locale }: { locale: Locale }) {
       });
   }, [locale]);
   useEffect(() => {
-    document.cookie = `pressay_locale=${locale}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+    if (rememberLocale)
+      document.cookie = `pressay_locale=${locale}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
     // Focus and visibility often fire together when switching tabs; each
     // refresh queries the session store, so collapse them to one per 10 s.
     let lastAttention = 0;
@@ -75,7 +87,7 @@ export function SessionNavigation({ locale }: { locale: Locale }) {
       window.removeEventListener("focus", attention);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [locale, refresh]);
+  }, [locale, refresh, rememberLocale]);
   async function signOut() {
     try {
       const r = await authClient.signOut();
