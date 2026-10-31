@@ -5,10 +5,11 @@ import { fill } from "@/lib/admin-i18n";
 import { STEP_UP_REQUIRED_EVENT } from "@/lib/step-up-event";
 
 /**
- * Downloads one CSV through a same-origin route. The Cloud requires the
- * step-up and audits the export; without it, the security panel opens.
+ * Downloads a file (CSV or JSON export) through a same-origin POST route. The
+ * Cloud requires the step-up and audits the export; without it, the security
+ * panel opens.
  */
-export function AdminCsvExport({
+export function AdminDownload({
   href,
   label,
   messages,
@@ -54,7 +55,7 @@ export function AdminCsvExport({
     }
   }
   return (
-    <div className="admin-export">
+    <div className="admin-download">
       <button
         className="button button-small"
         type="button"
@@ -63,7 +64,11 @@ export function AdminCsvExport({
       >
         {pending ? "…" : label}
       </button>
-      {message ? <p role="status">{message}</p> : null}
+      {message ? (
+        <p className="admin-form-message" role="status">
+          {message}
+        </p>
+      ) : null}
     </div>
   );
 }

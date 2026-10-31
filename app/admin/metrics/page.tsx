@@ -2,7 +2,7 @@ import { AdminHeading } from "@/components/admin-heading";
 import { adminData, AdminTable, adminDate } from "@/components/admin-data";
 import { money, platformLabel } from "@/lib/admin-format";
 import { metricsSummary } from "@/lib/admin-metrics";
-import { AdminCsvExport } from "@/components/admin-csv-export";
+import { AdminDownload } from "@/components/admin-download";
 import { ADMIN_LOCALE, adminMessages, fill } from "@/lib/admin-i18n";
 import { metricsMessages } from "@/lib/admin-messages/metrics";
 import {
@@ -322,7 +322,7 @@ function AdvancedMetrics({
       <p>{t.exports.detail}</p>
       <div className="admin-exports">
         {metricExportDatasets.map((dataset) => (
-          <AdminCsvExport
+          <AdminDownload
             key={dataset}
             href={`/api/admin/export/${dataset}.csv?${exportRange(dataset)}=${
               exportRange(dataset) === "months" ? period.months : period.days
