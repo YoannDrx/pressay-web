@@ -1,4 +1,6 @@
 import http from "node:http";
+// Waitlist sign-ups relayed by the site, with the claims of their token.
+let waitlistSignups = [];
 let billingError = false;
 let pastDue = false;
 let identityReads = 0;
@@ -7,8 +9,6 @@ let lastToken = null;
 // Same window as the Cloud's DELETE /v1/me freshness check.
 let deletionMaxAgeSeconds = 600;
 let deletionRequests = 0;
-// Waitlist sign-ups relayed by the site, with the claims of their token.
-let waitlistSignups = [];
 function decodedClaims(header) {
   const payload = /^Bearer [^.]+\.([^.]+)\./.exec(header ?? "")?.[1];
   if (!payload) return null;
