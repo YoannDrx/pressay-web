@@ -54,7 +54,11 @@ export function PricingPage({ locale }: { locale: Locale }) {
               </tr>
               <tr>
                 <th>Superwhisper</th>
-                <td>{fr ? "Cloud limité" : "Limited cloud"}</td>
+                <td>
+                  {fr
+                    ? "Whisper local illimité, sans IA"
+                    : "Unlimited local Whisper, no AI"}
+                </td>
                 <td>$8.49</td>
                 <td>$84.99</td>
                 <td>$249.99</td>
@@ -67,13 +71,13 @@ export function PricingPage({ locale }: { locale: Locale }) {
               <tr>
                 <th>Wispr Flow</th>
                 <td>
-                  {fr ? "2 000 mots/sem. desktop" : "2,000 words/week desktop"}
+                  {fr ? "2 000 mots/semaine" : "2,000 words/week"}
                 </td>
                 <td>$15</td>
                 <td>$12/mo</td>
                 <td>—</td>
                 <td>
-                  {fr ? "Cloud, commandes, équipes" : "Cloud, commands, teams"}
+                  {fr ? "Équipes, prise de notes" : "Teams, notetaker"}
                 </td>
               </tr>
               <tr>
@@ -90,7 +94,7 @@ export function PricingPage({ locale }: { locale: Locale }) {
               </tr>
               <tr>
                 <th>VoiceInk</th>
-                <td>{fr ? "20 dictées/jour" : "20 dictations/day"}</td>
+                <td>{fr ? "20 transcriptions/jour" : "20 transcriptions/day"}</td>
                 <td>$9</td>
                 <td>$50</td>
                 <td>—</td>
@@ -105,8 +109,8 @@ export function PricingPage({ locale }: { locale: Locale }) {
         </div>
         <p className="source-note">
           {fr
-            ? "Prix officiels observés le 3 août 2026. Les devises et taxes peuvent varier."
-            : "Official prices checked on August 3, 2026. Currency and taxes may vary."}{" "}
+            ? "Prix relevés sur les pages officielles le 31 octobre 2026 ; annuel Wispr Flow affiché par mois. Les devises et taxes peuvent varier."
+            : "Prices checked on the official pages on October 31, 2026; Wispr Flow annual shown per month. Currency and taxes may vary."}{" "}
           <a href="https://superwhisper.com/docs/get-started/sw-pro">
             Superwhisper
           </a>{" "}
