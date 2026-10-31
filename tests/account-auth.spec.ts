@@ -1245,9 +1245,10 @@ test("metrics show churn, cohort conversion, trials, download breakdowns and aud
 
   // Without step-up the export opens the security panel instead.
   await page.getByRole("button", { name: "Churn (CSV)" }).click();
+  // The export route compiles on first use in development.
   await expect(
     page.getByText("Saisis ton code Authenticator dans le panneau ouvert, puis réessaie."),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30_000 });
   await grantStepUp(context);
   await page.reload();
   const download = page.waitForEvent("download");
