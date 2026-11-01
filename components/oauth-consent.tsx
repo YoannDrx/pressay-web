@@ -47,8 +47,8 @@ export function OAuthConsent({
       <h1>{fr ? "Autoriser Pressay." : "Authorize Pressay."}</h1>
       <p>
         {fr
-          ? "L’application macOS demande uniquement ton identité et une session renouvelable. Elle n’accède jamais à tes dictées, fichiers ou clés BYOK."
-          : "The macOS app only asks for your identity and a renewable session. It never accesses your dictation, files or BYOK keys."}
+          ? "L’application Pressay demande uniquement ton identité et une session renouvelable. Elle n’accède jamais à tes dictées, fichiers ou clés BYOK."
+          : "The Pressay app only asks for your identity and a renewable session. It never accesses your dictation, files or BYOK keys."}
       </p>
       <ul className="oauth-scope-list">
         {scopes.map((scope) => (

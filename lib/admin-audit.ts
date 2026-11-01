@@ -23,7 +23,11 @@ function detailValue(key: string, value: string | number | boolean | null) {
       new Date(value),
     );
   if (key === "platform")
-    return value === "windows" ? "Windows" : value === "macos" ? "Mac" : String(value);
+    return (
+      ({ macos: "Mac", windows: "Windows", ios: "iPhone" } as Record<string, string>)[
+        String(value)
+      ] ?? String(value)
+    );
   return String(value);
 }
 

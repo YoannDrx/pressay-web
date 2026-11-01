@@ -27,21 +27,24 @@ export function platformLabel(
   platform: string | undefined,
   variant?: string,
 ): string {
+  if (platform === "ios") return "iPhone";
   if (platform === "windows") return "Windows";
   return variant === "mas" ? "Mac (App Store)" : "Mac";
 }
 
-/** "2 Mac · 1 Windows" from per-platform counts. */
+/** "2 Mac · 1 Windows · 1 iPhone" from per-platform counts. */
 export function deviceMix(
   macos: number | undefined,
   windows: number | undefined,
   fallbackTotal: number,
+  ios?: number,
 ): string {
   if (macos === undefined && windows === undefined)
     return String(fallbackTotal);
   const parts = [];
   if (macos) parts.push(`${macos} Mac`);
   if (windows) parts.push(`${windows} Windows`);
+  if (ios) parts.push(`${ios} iPhone`);
   return parts.join(" · ") || "0";
 }
 

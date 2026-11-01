@@ -67,8 +67,8 @@ export async function AccountSection({
             {!r.data.devices.length ? (
               <p>
                 {fr
-                  ? "Connecte Pressay sur ton Mac ou ton PC Windows pour le retrouver ici. La connexion au site ne consomme pas de place."
-                  : "Sign in to Pressay on your Mac or Windows PC to see it here. Website sign-in does not use a device slot."}
+                  ? "Connecte Pressay sur ton Mac, ton PC Windows ou ton iPhone pour le retrouver ici. La connexion au site ne consomme pas de place."
+                  : "Sign in to Pressay on your Mac, Windows PC or iPhone to see it here. Website sign-in does not use a device slot."}
               </p>
             ) : null}
             <div className="account-device-list">
@@ -404,9 +404,7 @@ function sourceLabel(source: string, fr: boolean) {
     (
       {
         stripe: fr ? "Abonnement direct Stripe" : "Direct Stripe subscription",
-        app_store: fr
-          ? "Abonnement Mac App Store"
-          : "Mac App Store subscription",
+        app_store: fr ? "Abonnement App Store" : "App Store subscription",
         support: fr ? "Accès offert par Pressay" : "Access granted by Pressay",
         trial: fr ? "Accès historique" : "Legacy access",
       } as Record<string, string>
@@ -421,6 +419,7 @@ function deviceLabel(
   variant: string,
   fr: boolean,
 ) {
+  if (platform === "ios") return "iPhone";
   if (platform === "windows") return "Windows";
   if (variant === "mas") return "Mac App Store";
   return `${platformLabel(platform)} · ${fr ? "version directe" : "direct download"}`;

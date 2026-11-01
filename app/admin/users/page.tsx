@@ -106,6 +106,7 @@ export default async function Page({
               u.macos_device_count,
               u.windows_device_count,
               u.active_device_count,
+              u.ios_device_count,
             ),
             adminDate(u.last_device_seen_at),
             adminDate(u.created_at),

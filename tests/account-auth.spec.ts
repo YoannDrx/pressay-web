@@ -233,7 +233,9 @@ test("admin customer record shows billing, devices and site identity only after 
   ).json()) as { count: number };
   await page.goto("/admin/users?search=cus_Fixture123");
   await expect(page.getByText("Recherche par client Stripe.")).toBeVisible();
-  await expect(page.getByRole("cell", { name: "1 Mac · 1 Windows" })).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "1 Mac · 1 Windows · 1 iPhone" }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "owner@example.test" }).click();
   const identity = page.locator(".admin-panel", { hasText: "Connexion au site" });
   await expect(identity).toContainText("Valide ton code Authenticator");
@@ -257,6 +259,7 @@ test("admin customer record shows billing, devices and site identity only after 
   await expect(page.getByText("Paiement échoué")).toBeVisible();
   await expect(page.getByText("Résiliation programmée")).toBeVisible();
   await expect(page.getByRole("cell", { name: "Windows" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "iPhone", exact: true })).toBeVisible();
   await expect(page.getByText(/Révoqué le/)).toBeVisible();
   await expect(page.getByText("Consultations de cette fiche")).toBeVisible();
   const after = (await (
@@ -442,7 +445,8 @@ test("account lists device platforms, asks to fix a failed payment and exports d
   await page.goto("/fr");
   await page.goto("/account/devices");
   await expect(page.getByText("2 / 3 appareils")).toBeVisible();
-  await expect(page.getByText(/^Windows · 1\.4\.0/)).toBeVisible();
+  await expect(page.getByText("Pocket iPhone")).toBeVisible();
+  await expect(page.getByText(/^iPhone · 1\.0\.0/)).toBeVisible();
   await request.post("http://127.0.0.1:31973/fixture/past-due");
   try {
     await page.goto("/account/billing");
@@ -1407,6 +1411,8 @@ test("metrics show Stripe and App Store revenue, trials apart, sign-ups and down
   await expect(page.getByText("Sandbox Apple actif (non payé) : 1.")).toBeVisible();
   await expect(page.getByRole("cell", { name: "Sandbox (non payé)" })).toBeVisible();
   await expect(page.locator(".admin-bars > div")).toHaveCount(30);
+  await expect(page.getByRole("heading", { name: "Appareils actifs par plateforme" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "iPhone", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Téléchargements (48 sur 30 jours)" })).toBeVisible();
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
