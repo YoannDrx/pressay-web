@@ -21,7 +21,7 @@ export default async function Page() {
       <AdminHeading
         eyebrow="DISPONIBILITÉ / LANCEMENT"
         title="Santé et lancement"
-        detail="Conditions indépendantes pour la vente directe et le Mac App Store. Valider une preuve n’active aucun paiement automatiquement."
+        detail="Conditions indépendantes pour la vente directe et l’App Store (Mac et iPhone). Valider une preuve n’active aucun paiement automatiquement."
       />
       {error}
       {d ? (
@@ -42,7 +42,7 @@ export default async function Page() {
               <h2>
                 {channel === "direct"
                   ? "Vente directe / Stripe"
-                  : "Mac App Store"}
+                  : "App Store (Mac et iPhone)"}
               </h2>
               <div className="admin-grid-two">
                 {d.gates

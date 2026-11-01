@@ -116,8 +116,8 @@ export async function readAdminIdentity(cloudRecord: {
           userAgent: session.userAgent ?? null,
         })),
       lastSignInAt: lastSignIn ? new Date(lastSignIn).toISOString() : null,
-      // Mac and Windows apps sign in through OAuth; each live refresh token
-      // is one desktop authorization.
+      // Mac, Windows and iPhone apps sign in through OAuth; each live refresh
+      // token is one app authorization.
       desktopAuthorizations: refreshTokens.filter(
         (token) =>
           !token.revoked &&

@@ -31,6 +31,9 @@ test("devices are labelled by platform", () => {
   assert.equal(platformLabel("windows"), "Windows");
   assert.equal(platformLabel("macos", "mas"), "Mac (App Store)");
   assert.equal(platformLabel(undefined), "Mac");
+  assert.equal(platformLabel("ios", "app_store_ios"), "iPhone");
+  assert.equal(deviceMix(1, 1, 3, 1), "1 Mac · 1 Windows · 1 iPhone");
+  assert.equal(deviceMix(0, 0, 1, 1), "1 iPhone");
   assert.equal(deviceMix(2, 1, 3), "2 Mac · 1 Windows");
   assert.equal(deviceMix(0, 0, 0), "0");
   assert.equal(deviceMix(undefined, undefined, 4), "4");

@@ -577,7 +577,7 @@ function SupportActions({
         <AdminActionForm
           endpoint={`/api/admin/users/${accountId}/sign-out`}
           title="Déconnecter partout"
-          description="Ferme toutes les sessions du site et retire les autorisations des apps Mac et Windows. Les sessions déjà ouvertes s’arrêtent sous une minute ; les apps doivent se reconnecter au plus tard 15 minutes après."
+          description="Ferme toutes les sessions du site et retire les autorisations des apps Mac, Windows et iPhone. Les sessions déjà ouvertes s’arrêtent sous une minute ; les apps doivent se reconnecter au plus tard 15 minutes après."
           submitLabel="Déconnecter"
           fields={[{ name: "reason", label: "Motif", required: true }]}
           confirmMessage="Déconnecter ce client de tous ses navigateurs et de ses apps ?"

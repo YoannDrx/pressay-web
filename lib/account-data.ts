@@ -59,7 +59,7 @@ export type Billing = {
 export type Device = {
   id: string;
   displayName: string;
-  platform?: "macos" | "windows";
+  platform?: "macos" | "windows" | "ios";
   appVersion: string;
   appVariant: string;
   lastSeenAt: string;
