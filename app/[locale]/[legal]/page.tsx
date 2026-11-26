@@ -27,7 +27,7 @@ export default async function LegalPageRoute({ params }: { params: Promise<{ loc
   if (!(locale === "fr" || locale === "en") || !legalPages.includes(legal as LegalPage)) notFound();
   const lang = locale as Locale;
   const page = documentFor(lang, legal as LegalPage);
-  return <ContentPage locale={lang} eyebrow={`LEGAL / ${legal.toUpperCase()}`} title={page.title} intro={page.intro}>
+  return <ContentPage locale={lang} title={page.title} intro={page.intro}>
     <div className="legal-layout">
       <aside className="legal-toc"><strong>{lang === "fr" ? "Dans cette page" : "On this page"}</strong>{page.sections.map((section, index) => <a href={`#section-${index + 1}`} key={section.title}>{String(index + 1).padStart(2, "0")} · {section.title}</a>)}</aside>
       <article className="legal-document">

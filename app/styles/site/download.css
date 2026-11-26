@@ -1,0 +1,36 @@
+/* Download page: macOS / Windows selector. Without scripting both panels stay readable. */
+.download-tabs { display: inline-flex; gap: 4px; margin-bottom: 28px; padding: 4px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); }
+.download-tabs button {
+  min-height: 44px; padding: 0 20px; border: 0; border-radius: 9px; background: transparent;
+  color: var(--ink-2); font: 600 var(--step-0)/1 var(--font-body); cursor: pointer;
+}
+.download-tabs button:hover { color: var(--ink); }
+.download-tabs button[aria-selected="true"] { color: var(--on-signal); background: var(--signal); }
+.download-platforms [role="tabpanel"] { scroll-margin-top: 100px; border-radius: var(--radius-sheet); }
+.download-card {
+  padding: clamp(24px, 4vw, 40px); display: flex; align-items: center; justify-content: space-between; gap: 32px;
+  border: 1px solid var(--rule); border-radius: var(--radius-sheet); background: var(--surface); box-shadow: var(--shadow-soft);
+}
+.download-card > div:first-child { display: grid; gap: 8px; }
+.release-channel { justify-self: start; padding: 3px 10px; border-radius: 999px; color: var(--ink-2); background: var(--surface-2); font-size: 12px; font-weight: 650; }
+.download-card h2 { font-size: var(--step-3); }
+.download-card p { color: var(--ink-2); }
+.download-card .download-beta-note { max-width: 52ch; color: var(--warn); font-size: var(--step--1); line-height: 1.5; }
+.download-card .download-soon { font-size: var(--step-1); color: var(--ink); }
+.download-actions { display: grid; justify-items: center; gap: 12px; text-align: center; }
+.download-actions .inline-arrow { color: var(--signal-ink); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+.download-checksums { font-size: var(--step--1); }
+.download-checksums a { color: var(--signal-ink); text-decoration: underline; text-underline-offset: 3px; }
+.steps { margin-top: clamp(48px, 7vw, 80px); display: grid; gap: 24px; }
+.steps ol { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 40px; }
+.steps li { counter-increment: step; padding: 20px 0; display: grid; grid-template-columns: 2rem 1fr; gap: 12px; border-top: 1px solid var(--rule); color: var(--ink-2); }
+.steps li::before { content: counter(step); color: var(--signal-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  .download-card { flex-direction: column; align-items: stretch; }
+  .download-actions .button { width: 100%; }
+  .steps ol { grid-template-columns: 1fr; }
+}
+@media (scripting: none) {
+  .download-tabs { display: none; }
+  .download-platforms [role="tabpanel"][hidden] { display: block; margin-top: 64px; }
+}

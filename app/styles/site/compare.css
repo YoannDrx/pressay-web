@@ -1,0 +1,13 @@
+/* Price comparison table (landing and pricing page). */
+.comparison { display: grid; gap: 16px; }
+.table-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: var(--radius-sheet); background: var(--surface); }
+.comparison table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: var(--step--1); }
+.comparison th, .comparison td { padding: 16px 20px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; color: var(--ink-2); }
+.comparison tbody tr:last-child > * { border-bottom: 0; }
+.comparison thead th { color: var(--ink-3); font-weight: 650; background: var(--bg); }
+.comparison tbody th { color: var(--ink); font-weight: 650; }
+.comparison .our-row > * { color: var(--ink); background: var(--signal-wash); }
+.comparison .our-row th { color: var(--signal-ink); }
+.source-note { max-width: 90ch; color: var(--ink-3); font-size: var(--step--1); line-height: 1.6; }
+.source-note a { color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+.source-note a:hover { color: var(--ink); }

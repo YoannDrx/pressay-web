@@ -45,7 +45,7 @@ test("crawlers and link previews always get the x-default page", () => {
   assert.equal(isAutomatedAgent(chrome), false);
 });
 
-test("marquee logos are served as standalone SVG files", () => {
+test("compatibility logos are served as standalone SVG files", () => {
   const files = brandIconFiles();
   assert.ok(files.includes("logos-slack-icon.svg"));
   assert.ok(files.includes("simple-cursor.svg"));

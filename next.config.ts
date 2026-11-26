@@ -21,6 +21,12 @@ const modelRedirects = [
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  experimental: {
+    // Public pages render per request (CSP nonce), so a stylesheet request is
+    // always on the critical path: inline it into the HTML instead. style-src
+    // already allows inline styles; scripts keep their nonce.
+    inlineCss: true,
+  },
   async rewrites() {
     const updatesHost = [
       { type: "host" as const, value: "updates.press-say.app" },

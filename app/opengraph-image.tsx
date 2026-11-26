@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Pressay — Your Mac, now speaks your language.";
+export const alt = "Pressay — Wherever you can type, you can speak. Local dictation for Mac and PC.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 function SignalMark() {
@@ -67,8 +67,8 @@ export default function Image() {
         flexDirection: "column",
         justifyContent: "space-between",
         padding: 72,
-        color: "#f4f0e7",
-        background: "#0d0c10",
+        color: "#edf1f7",
+        background: "#0b0e14",
         fontFamily: "sans-serif",
       }}
     >
@@ -88,18 +88,18 @@ export default function Image() {
           lineHeight: 1,
         }}
       >
-        <span>Your Mac, now speaks</span>
-        <span>your language.</span>
+        <span>Wherever you can type,</span>
+        <span>you can speak.</span>
       </div>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           fontSize: 24,
-          color: "#aaa5b2",
+          color: "#a9b3c4",
         }}
       >
-        <span>PRIVATE VOICE OS FOR macOS</span>
+        <span>Local dictation for macOS and Windows</span>
         <span>press-say.app</span>
       </div>
     </div>,

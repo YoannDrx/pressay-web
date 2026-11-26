@@ -1,6 +1,6 @@
 import { brandIconFiles, brandIconSVG } from "@/lib/brand-icons";
 
-// Built once and served from the CDN: only the marquee icons exist.
+// Built once and served from the CDN: only the compatibility wall icons exist.
 export const dynamic = "force-static";
 export const dynamicParams = false;
 export function generateStaticParams() {

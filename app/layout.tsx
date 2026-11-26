@@ -9,11 +9,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://press-say.app"),
   title: {
-    default: "Pressay — Le Voice OS local du Mac",
+    default: "Pressay — Dictée vocale locale pour Mac et PC",
     template: "%s · Pressay",
   },
   description:
-    "Dictez, transformez et corrigez dans chaque app avec une route de traitement visible et le local par défaut.",
+    "Appuie sur un raccourci, parle : le texte s’écrit dans l’app ouverte. Dictée locale, hors ligne et sans compte sur macOS et Windows.",
   applicationName: "Pressay",
   twitter: { card: "summary_large_image" },
   icons: { icon: "/logo.svg" },

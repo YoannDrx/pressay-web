@@ -120,22 +120,39 @@ test("French landing exposes the product contract and metadata", async ({
   page,
 }) => {
   const response = await page.goto("/fr");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "Là où tu peux écrire",
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Là où tu peux écrire, tu peux parler.",
   );
+  for (const heading of [
+    "Appuie, parle, c’est écrit.",
+    "Dicte en français, envoie en anglais.",
+    "Une voix, la bonne forme.",
+    "Ta voix reste sur ton ordinateur.",
+    "Dans toutes tes apps, sur Mac et sur PC.",
+    "Comparer avant de choisir.",
+    "Questions fréquentes",
+  ])
+    await expect(page.getByRole("heading", { level: 2, name: heading })).toBeVisible();
+  // Mac and PC shortcuts of both shortcuts are spelled out.
+  await expect(page.locator("#how kbd.keys")).toHaveCount(2);
+  await expect(page.locator("#translate kbd.keys")).toHaveCount(2);
   await expect(
     page.getByText("presse-papiers", { exact: false }).first(),
   ).toBeVisible();
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(
     1,
   );
-  const structuredData = await page
-    .locator('script[type="application/ld+json"]')
-    .textContent();
-  const offers =
-    (JSON.parse(structuredData ?? "{}") as { offers?: Array<{ name: string }> })
-      .offers ?? [];
-  expect(offers.map((offer) => offer.name)).toEqual(
+  const structuredData = JSON.parse(
+    (await page.locator('script[type="application/ld+json"]').textContent()) ??
+      "{}",
+  ) as {
+    "@type"?: string;
+    operatingSystem?: string;
+    offers?: Array<{ name: string }>;
+  };
+  expect(structuredData["@type"]).toBe("SoftwareApplication");
+  expect(structuredData.operatingSystem).toContain("macOS 14");
+  expect((structuredData.offers ?? []).map((offer) => offer.name)).toEqual(
     isCommercialLaunchEnabled
       ? ["Free", "Pro monthly", "Pro annual"]
       : ["Free"],
@@ -143,8 +160,54 @@ test("French landing exposes the product contract and metadata", async ({
   expect(response?.headers()["content-security-policy"]).toContain(
     "frame-ancestors 'none'",
   );
+  await expect(page.locator("footer")).toContainText("macOS 14+ · Windows 10/11");
+  // The first Tab reaches the skip link, which becomes visible.
   await page.keyboard.press("Tab");
+  await expect(page.locator(":focus-visible")).toHaveText("Aller au contenu");
   await expect(page.locator(":focus-visible")).toBeVisible();
+});
+
+test("the download call to action follows the visitor's system", async ({
+  browser,
+}) => {
+  const userAgents = {
+    macos:
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    windows:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+  };
+  for (const [platform, userAgent] of Object.entries(userAgents)) {
+    const context = await browser.newContext({ userAgent });
+    try {
+      const page = await context.newPage();
+      await page.goto("/en");
+      const hero = page.locator(".hero");
+      // A Windows download is only offered once a release ships installers.
+      const windowsReleased =
+        (await hero.getByText("Windows is coming soon").count()) === 0;
+      const expected =
+        platform === "windows" && windowsReleased ? "windows" : "macos";
+      const primary = hero.locator(".button-primary");
+      await expect(primary).toHaveText(
+        expected === "windows" ? "Download for Windows" : "Download for macOS",
+      );
+      await expect(primary).toHaveAttribute("href", `/en/download#${expected}`);
+      if (windowsReleased)
+        await expect(hero.locator("a.hero-other")).toHaveAttribute(
+          "href",
+          `/en/download#${expected === "windows" ? "macos" : "windows"}`,
+        );
+      // The closing choice shows both systems, the visitor's own first.
+      const choices = page.locator(".cta-platforms > li");
+      await expect(choices).toHaveCount(2);
+      await expect(choices.first()).toHaveClass(/is-detected/);
+      await expect(choices.first().locator("h3")).toContainText(
+        expected === "windows" ? "Windows" : "macOS",
+      );
+    } finally {
+      await context.close();
+    }
+  }
 });
 
 test("checkout result pages never grant Pro from a browser redirect", async ({
@@ -164,21 +227,22 @@ test("checkout result pages never grant Pro from a browser redirect", async ({
   await expect(page.getByText("BYOK")).toHaveCount(0);
 });
 
-test("landing navigation and compatibility marquee are accessible", async ({
+test("landing navigation and compatibility wall are accessible", async ({
   page,
 }) => {
   await page.goto("/fr");
   await expect(page.getByLabel("Choisir la langue")).toContainText("FR");
-  await expect(page.getByLabel("Applications compatibles")).toContainText(
-    "Slack",
-  );
-  const brandIcons = page.locator(".app-logo-card .brand-icon");
-  await expect(brandIcons).toHaveCount(26);
+  const wall = page.getByRole("list", { name: "Applications compatibles" });
+  await expect(wall).toContainText("Slack");
+  await expect(wall).toContainText("Windows Terminal");
+  const brandIcons = page.locator(".app-logo .brand-icon");
+  await expect(brandIcons).toHaveCount(22);
   // Logos are cacheable files, not data URIs inflating every landing response.
   await expect(brandIcons.first()).toHaveAttribute(
     "src",
-    /^\/brand-icons\/logos-[a-z-]+\.svg$/,
+    /^\/brand-icons\/(logos|simple)-[a-z-]+\.svg$/,
   );
+  await brandIcons.first().scrollIntoViewIfNeeded();
   await expect
     .poll(() => brandIcons.first().evaluate((image: HTMLImageElement) => image.naturalWidth))
     .toBeGreaterThan(0);
@@ -203,11 +267,11 @@ test("desktop secure-input help URL resolves to localized private guidance", asy
   ).toBeVisible();
 });
 
-test("processing routes stay explicit and keyboard operable", async ({
+test("processing routes list only validated routes, Local first", async ({
   page,
 }) => {
   await page.goto("/en");
-  const routes = page.getByRole("group", { name: "Processing route" });
+  const routes = page.getByRole("list", { name: "Available processing routes" });
   const expectedRoutes = [
     "Local",
     ...(validatedCommercialCapabilities.has("apple_intelligence")
@@ -218,46 +282,30 @@ test("processing routes stay explicit and keyboard operable", async ({
       ? ["Pressay Cloud"]
       : []),
   ];
-  await expect(routes.getByRole("button")).toHaveCount(expectedRoutes.length);
-  await expect(routes.getByRole("button", { name: "Local" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  for (const route of expectedRoutes) {
-    await expect(
-      routes.getByRole("button", { name: route, exact: true }),
-    ).toBeVisible();
-  }
-  if (expectedRoutes.length === 1) {
-    await expect(routes.getByRole("button", { name: "BYOK" })).toHaveCount(0);
-    await expect(
-      page.getByRole("heading", { name: "One voice. One validated route." }),
-    ).toBeVisible();
-  } else if (expectedRoutes.includes("BYOK")) {
-    await routes.getByRole("button", { name: "BYOK", exact: true }).click();
-    await expect(
-      routes.getByRole("button", { name: "BYOK", exact: true }),
-    ).toHaveAttribute("aria-pressed", "true");
-    await expect(page.locator(".route-console-core strong")).toHaveText("BYOK");
-    await expect(page.locator(".route-console")).toHaveAttribute(
-      "data-route",
-      "byok",
-    );
-  }
+  await expect(routes.getByRole("listitem")).toHaveCount(expectedRoutes.length);
+  await expect(routes.getByRole("listitem").first()).toContainText("Default");
+  for (const [index, route] of expectedRoutes.entries())
+    await expect(routes.getByRole("listitem").nth(index).locator("strong")).toHaveText(route);
 });
 
-test("immersive motion has a complete reduced-motion fallback", async ({
+test("the hero demonstration can be paused and has a reduced-motion fallback", async ({
   page,
 }) => {
+  await page.goto("/en");
+  const demo = page.locator(".demo");
+  await expect(demo.getByRole("img")).toHaveAttribute("aria-label", /Demonstration/);
+  // The loop starts on its own and can be paused (WCAG 2.2.2).
+  await page.getByRole("button", { name: "Pause" }).click();
+  await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
+
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/en");
-  await expect(page.locator("[data-reveal]").first()).toHaveCSS("opacity", "1");
-  await expect(page.locator(".route-console-signal i").first()).toHaveCSS(
-    "animation-name",
-    "none",
-  );
-  await expect(page.locator(".story-sticky")).toHaveCSS("position", "relative");
-  await expect(page.locator(".story-progress")).toHaveCSS("display", "none");
+  // Reduced motion shows the finished first scene and no animation control.
+  await expect(demo).toHaveAttribute("data-phase", "written");
+  await expect(demo.locator(".demo-text")).toContainText("Hi Sam, can we move the product review");
+  await expect(demo.locator(".demo-text span").last()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Pause" })).toHaveCount(0);
+  await expect(demo.locator(".voice-wave i").first()).toHaveCSS("animation-name", "none");
 });
 
 test("expanded legal pages expose identity, privacy and withdrawal routes", async ({
@@ -318,9 +366,15 @@ test("English routes expose factual pricing and the current launch state", async
   }
   // The real Pro scope is always listed, prices include VAT.
   await expect(
-    page.getByText("Apple Intelligence and BYOK (your own key)", {
+    page.getByText("BYOK (your own key) and Apple Intelligence on Mac", {
       exact: true,
     }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Up to 3 devices (Mac or PC)", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Encrypted sync between your devices", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("incl. VAT").first()).toBeVisible();
 });
@@ -530,7 +584,7 @@ test("Free and Pro stay centered with equal widths across public pages", async (
     expect(Math.abs(free!.width - pro!.width)).toBeLessThanOrEqual(1);
     if (viewport.width < 800) expect(pro!.y).toBeGreaterThan(free!.y);
     else expect(Math.abs(free!.y - pro!.y)).toBeLessThanOrEqual(1);
-    await expect(page.locator("footer .brand-logo")).toBeAttached();
+    await expect(page.locator("footer .site-brand img")).toBeAttached();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,

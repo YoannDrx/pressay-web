@@ -1,0 +1,20 @@
+/* Closing download choice. */
+.cta-layout { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: clamp(32px, 6vw, 88px); align-items: center; }
+.cta-copy { display: grid; gap: 18px; }
+.cta-copy h2 { font-size: var(--step-5); line-height: 1; }
+.cta-copy p { color: var(--ink-2); font-size: var(--step-1); }
+.cta-platforms { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.cta-platforms li {
+  padding: 28px; display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; align-content: start;
+  border: 1px solid var(--rule); border-radius: var(--radius-sheet); background: var(--surface);
+}
+.cta-platforms li.is-detected { border-color: color-mix(in srgb, var(--signal) 55%, var(--rule)); box-shadow: var(--shadow-lift); }
+.cta-platforms h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.cta-tag { padding: 2px 9px; border-radius: 999px; color: var(--signal-ink); background: var(--signal-wash); font-size: 12px; font-weight: 650; letter-spacing: 0; }
+.cta-platforms svg { width: 34px; height: 34px; margin-top: 6px; }
+.cta-platforms h3 { font-size: var(--step-2); }
+.cta-platforms p { color: var(--ink-2); font-size: var(--step--1); }
+.cta-platforms .button { margin-top: 14px; padding-inline: 16px; white-space: nowrap; }
+.cta-soon { margin-top: 14px; color: var(--ink-3); }
+@media (max-width: 960px) { .cta-layout { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .cta-platforms { grid-template-columns: 1fr; } }
