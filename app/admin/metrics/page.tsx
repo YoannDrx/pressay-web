@@ -160,22 +160,6 @@ export default async function Page({
             rows={m.grants.map((row) => [grantSources[row.source] ?? row.source, row.count])}
           />
 
-          {m.devicesByPlatform ? (
-            <>
-              <h2>Appareils actifs par plateforme</h2>
-              <AdminTable
-                headers={["Plateforme", "Actifs", "Vus 7 j", "Vus 30 j"]}
-                rows={m.devicesByPlatform.map((row) => [
-                  platformLabel(row.platform),
-                  row.active,
-                  row.seen_7d,
-                  row.seen_30d,
-                ])}
-              />
-              <p>Comptes connectés uniquement : la dictée locale sans compte n’apparaît pas ici.</p>
-            </>
-          ) : null}
-
           <h2>Téléchargements ({s.downloads30d} sur 30 jours)</h2>
           <AdminTable
             headers={["Plateforme", "Version", "7 jours", "30 jours"]}
@@ -187,8 +171,8 @@ export default async function Page({
             ])}
           />
           <p>
-            Téléchargements depuis le site (Mac et Windows). Les installations iPhone se
-            lisent dans App Store Connect.
+            Téléchargements depuis le site (Mac et Windows). Les installations Mac App Store
+            se lisent dans App Store Connect.
           </p>
         </>
       ) : null}
