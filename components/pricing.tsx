@@ -4,17 +4,18 @@ import { plans } from "@/lib/content";
 import { priceTaxNote, vatRegime } from "@/lib/legal";
 import { publicReleaseCapabilities } from "@/lib/public-release-capabilities";
 
-export function Pricing({ locale, compact = false }: { locale: Locale; compact?: boolean }) {
+/** Free and Pro cards. `headingLevel` keeps the outline valid on each page. */
+export function Pricing({ locale, headingLevel = 3 }: { locale: Locale; headingLevel?: 2 | 3 }) {
+  const Heading = headingLevel === 2 ? "h2" : "h3";
   const release = publicReleaseCapabilities();
   const fr = locale === "fr";
   const taxSuffix = vatRegime === "franchise" ? "" : fr ? " TTC" : " incl. VAT";
-  return <><div className={`pricing-grid${compact ? " compact" : ""}`}>
+  return <><div className="pricing-grid">
     {plans.map((plan) => {
       const features = fr ? plan.featuresFr : plan.featuresEn;
       return <article className={`price-card ${plan.code === "pro" ? "featured" : ""}`} key={plan.code}>
-      <div>
-        <span className="mono-label">{plan.code.replaceAll("_", " / ")}</span>
-        <h3>{plan.name}</h3>
+      <div className="price-head">
+        <Heading>{plan.name}</Heading>
         <strong>{plan.code === "pro" ? (fr ? `7,99 €${taxSuffix} / mois` : `€7.99${taxSuffix} / month`) : fr ? "0 €" : "€0"}</strong>
         <p>{plan.code === "pro" ? (fr ? `ou 69 €${taxSuffix} / an · aucun essai automatique` : `or €69${taxSuffix} / year · no automatic trial`) : fr ? plan.detailFr : plan.detailEn}</p>
       </div>

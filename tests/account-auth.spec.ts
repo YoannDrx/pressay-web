@@ -59,7 +59,7 @@ test("session survives landing, account, back, refresh, and active sign-in redir
   expect(publicPageAPICalls).toEqual([]);
   await expect(page.locator(".session-menu")).toHaveCount(0);
   await expect(
-    page.locator(".site-header .nav-actions > a.text-link[href='/account']"),
+    page.locator(".site-header a.header-link[href='/account']"),
   ).toHaveText("My account");
   await page.goto("/account");
   await expect(

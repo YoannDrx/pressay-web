@@ -1,0 +1,32 @@
+/* Private and local first: the boundary of the computer, drawn. */
+.privacy-boundary {
+  position: relative; margin: 0; padding: clamp(36px, 5vw, 56px) clamp(20px, 4vw, 48px) clamp(28px, 4vw, 44px);
+  border: 1.5px dashed var(--rule-strong); border-radius: 22px;
+}
+.privacy-boundary figcaption {
+  position: absolute; top: -13px; left: clamp(16px, 3vw, 36px); padding: 0 10px;
+  background: var(--bg); color: var(--ink-2); font-size: var(--step--1); font-weight: 650;
+}
+.privacy-boundary ol { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; position: relative; }
+.privacy-boundary ol::before { content: ""; position: absolute; top: 50%; left: 8%; right: 8%; height: 2px; background: linear-gradient(90deg, var(--listen-fx), var(--signal)); opacity: .6; }
+.privacy-boundary li {
+  position: relative; min-height: 76px; padding: 14px 18px; display: grid; place-items: center; text-align: center;
+  border: 1px solid var(--rule); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-soft);
+  font-weight: 650; line-height: 1.3;
+}
+.privacy-boundary li:nth-child(2) { border-color: color-mix(in srgb, var(--signal) 50%, var(--rule)); color: var(--signal-ink); }
+.privacy-routes { margin: 24px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.privacy-routes li { padding: 16px 18px; display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; border: 1px solid var(--rule); border-radius: 12px; }
+.privacy-routes strong { font-weight: 650; }
+.privacy-routes span { justify-self: start; padding: 2px 8px; border-radius: 999px; color: var(--ink-2); background: var(--surface-2); font-size: 12px; font-weight: 650; }
+.privacy-routes li[data-route="local"] span { color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, var(--surface)); }
+.privacy-routes p { grid-column: 1 / -1; color: var(--ink-2); font-size: var(--step--1); line-height: 1.5; }
+.privacy-points { margin: clamp(40px, 6vw, 64px) 0 32px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px clamp(24px, 4vw, 56px); }
+.privacy-points div { padding-top: 18px; border-top: 2px solid var(--ink); }
+.privacy-points dt { font-size: var(--step-1); font-weight: 650; }
+.privacy-points dd { margin: 8px 0 0; color: var(--ink-2); }
+@media (max-width: 760px) {
+  .privacy-boundary ol { grid-template-columns: 1fr; }
+  .privacy-boundary ol::before { top: 8%; bottom: 8%; left: 50%; right: auto; width: 2px; height: auto; background: linear-gradient(180deg, var(--listen-fx), var(--signal)); }
+  .privacy-points { grid-template-columns: 1fr; }
+}

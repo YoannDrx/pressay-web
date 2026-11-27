@@ -1,0 +1,24 @@
+/* Press, speak, written: a real sequence, so the steps are numbered. */
+.how-steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(28px, 4vw, 56px); }
+.how-steps li { counter-increment: step; display: grid; grid-template-rows: auto auto 1fr; align-content: start; gap: 12px; }
+.how-steps h3 { display: flex; align-items: baseline; gap: 12px; font-size: var(--step-2); }
+.how-steps h3::before { content: counter(step); color: var(--signal-ink); font-size: var(--step-0); font-weight: 700; font-variant-numeric: tabular-nums; }
+.how-steps li > p { max-width: 34ch; color: var(--ink-2); }
+.how-visual {
+  height: 148px; margin-bottom: 16px; padding: 20px; display: grid; align-content: center;
+  border: 1px solid var(--rule); border-radius: var(--radius-sheet); background: var(--surface);
+}
+.how-keys { grid-template-columns: auto 1fr; align-items: center; gap: 14px 16px; }
+.how-keys > span { color: var(--ink-3); font-size: var(--step--1); font-weight: 550; }
+.how-wave { justify-items: center; gap: 12px; }
+.how-wave .wave { height: 52px; gap: 4px; }
+.how-wave .wave i { width: 4px; }
+.how-wave span { color: var(--listen); font-size: var(--step--1); font-weight: 650; }
+.how-written { grid-template-columns: 1fr auto; align-items: center; gap: 14px; }
+.how-written p { padding-bottom: 10px; border-bottom: 1px solid var(--rule-strong); font: 400 1.3rem/1.35 var(--font-text); }
+.how-written p i { display: inline-block; width: 2px; height: 1.05em; margin-left: 3px; vertical-align: -.14em; background: var(--signal); }
+.how-written svg { width: 28px; height: 28px; padding: 6px; border-radius: 50%; color: var(--surface); background: var(--ok); }
+@media (max-width: 860px) {
+  .how-steps { grid-template-columns: 1fr; }
+  .how-visual { height: auto; min-height: 120px; }
+}

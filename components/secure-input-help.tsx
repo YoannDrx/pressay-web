@@ -20,7 +20,6 @@ export function SecureInputHelp({ locale }: { locale: Locale }) {
   return (
     <ContentPage
       locale={locale}
-      eyebrow="SUPPORT / SECURE INPUT"
       title={
         fr
           ? "Votre secret reste hors de portée."

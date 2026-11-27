@@ -1,0 +1,18 @@
+/*
+ * Public site stylesheet, loaded once by components/site-frame.tsx so every
+ * public page gets a single render-blocking request. One partial per section.
+ */
+@import "./base.css";
+@import "./chrome.css";
+@import "./content.css";
+@import "./hero.css";
+@import "./how.css";
+@import "./translate.css";
+@import "./modes.css";
+@import "./privacy.css";
+@import "./apps.css";
+@import "./compare.css";
+@import "./pricing.css";
+@import "./faq.css";
+@import "./cta.css";
+@import "./download.css";

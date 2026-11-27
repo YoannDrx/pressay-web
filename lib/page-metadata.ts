@@ -12,8 +12,8 @@ const shareImage = (locale: Locale) => ({
   height: 630,
   alt:
     locale === "fr"
-      ? "Pressay — la dictée locale pour Mac"
-      : "Pressay — local dictation for Mac",
+      ? "Pressay — la dictée vocale locale pour Mac et PC"
+      : "Pressay — local voice dictation for Mac and PC",
 });
 
 /**
@@ -30,14 +30,14 @@ export function languageAlternates(path: string, origin = ""): Record<string, st
 
 export const defaults: Record<Locale, { title: string; description: string }> = {
   fr: {
-    title: "Pressay — Le Voice OS local du Mac",
+    title: "Pressay — Dictée vocale locale pour Mac et PC",
     description:
-      "Dictez, transformez et corrigez dans chaque app avec une route de traitement visible et le local par défaut.",
+      "Appuie sur un raccourci, parle : le texte s’écrit dans l’app ouverte. Dictée locale illimitée, hors ligne et sans compte, sur macOS et Windows.",
   },
   en: {
-    title: "Pressay — The local Voice OS for Mac",
+    title: "Pressay — Local voice dictation for Mac and PC",
     description:
-      "Dictate, rewrite and correct in every app, with a visible processing route and local by default.",
+      "Press a shortcut, speak, and the text lands in the app you are using. Unlimited local dictation, offline and without an account, on macOS and Windows.",
   },
 };
 

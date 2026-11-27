@@ -18,7 +18,6 @@ export default async function NotFound() {
   return (
     <ContentPage
       locale={locale}
-      eyebrow="404"
       title={fr ? "Cette page n’existe pas." : "This page does not exist."}
       intro={
         fr

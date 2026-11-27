@@ -1,0 +1,36 @@
+/* Free and Pro, side by side and the same width. */
+.pricing-grid { width: 100%; max-width: 920px; margin-inline: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
+.price-card {
+  padding: clamp(24px, 3vw, 36px); display: flex; flex-direction: column; gap: 22px;
+  border: 1px solid var(--rule); border-radius: var(--radius-sheet); background: var(--surface);
+}
+.price-card.featured { border-color: color-mix(in srgb, var(--transform) 50%, var(--rule)); box-shadow: var(--shadow-lift); }
+.price-head { display: grid; gap: 6px; }
+.price-card h2, .price-card h3 { font-size: var(--step-2); letter-spacing: -0.01em; }
+.price-card.featured :is(h2, h3) { color: var(--transform); }
+.price-head strong { margin-top: 8px; font-size: clamp(1.5rem, 1.25rem + .8vw, 1.875rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.price-head p { color: var(--ink-2); font-size: var(--step--1); }
+.price-card ul { flex: 1; margin: 0; padding: 20px 0 0; list-style: none; display: grid; align-content: start; gap: 10px; border-top: 1px solid var(--rule); }
+.price-card li { position: relative; padding-left: 26px; color: var(--ink-2); font-size: var(--step--1); line-height: 1.5; }
+.price-card li::before {
+  content: ""; position: absolute; left: 2px; top: .38em; width: 13px; height: 7px;
+  border-left: 2px solid var(--ok); border-bottom: 2px solid var(--ok); transform: rotate(-45deg);
+}
+.price-card.featured li:first-child { padding-left: 0; color: var(--ink); font-weight: 600; }
+.price-card.featured li:first-child::before { display: none; }
+.price-card p.price-card-note { padding: 12px 14px; border-radius: 10px; color: var(--ink-2); background: var(--bg); font-size: var(--step--1); line-height: 1.5; }
+.pricing-legal-note { max-width: 760px; margin: 24px auto 0; color: var(--ink-3); font-size: var(--step--1); line-height: 1.6; text-align: center; }
+.pricing-more { margin-top: 28px; text-align: center; }
+
+/* Checkout (only rendered once the commercial launch is enabled). */
+.site .price-actions { display: grid; gap: 10px; }
+.site .checkout-consents { display: grid; gap: 10px; margin: 4px 0; }
+.site .checkout-consents label { display: grid; grid-template-columns: 18px 1fr; gap: 10px; color: var(--ink-2); font-size: var(--step--1); line-height: 1.45; }
+.site .checkout-consents input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--signal); }
+.site .checkout-consents a { color: var(--signal-ink); text-decoration: underline; text-underline-offset: 3px; }
+.site .form-error { display: block; margin-top: 8px; color: #c0263f; text-align: center; }
+@media (prefers-color-scheme: dark) { .site .form-error { color: #ff91a8; } }
+
+@media (max-width: 800px) {
+  .pricing-grid { grid-template-columns: 1fr; max-width: 520px; }
+}

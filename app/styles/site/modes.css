@@ -1,0 +1,20 @@
+/* Modes: one spoken sentence, then what each mode writes from it. */
+.modes-layout { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: clamp(40px, 6vw, 88px); align-items: start; }
+.modes-head { position: sticky; top: 100px; margin-bottom: 0; }
+.modes-head .modes-note { color: var(--ink-3); font-size: var(--step-0); line-height: 1.6; }
+.modes-sheet { border: 1px solid var(--rule); border-radius: var(--radius-sheet); background: var(--surface); box-shadow: var(--shadow-soft); overflow: hidden; }
+.modes-spoken { padding: 24px clamp(20px, 3vw, 32px); display: grid; gap: 8px; border-bottom: 1px solid var(--rule); background: var(--bg); }
+.modes-spoken span { color: var(--listen); font-size: var(--step--1); font-weight: 650; }
+.modes-spoken p { color: var(--ink-2); font-size: var(--step-1); line-height: 1.5; }
+.modes-list { margin: 0; }
+.modes-list > div { padding: 22px clamp(20px, 3vw, 32px); display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: 8px 24px; align-items: baseline; }
+.modes-list > div + div { border-top: 1px solid var(--rule); }
+.modes-list dt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 650; }
+.modes-list dd { margin: 0; color: var(--ink); font: 400 var(--step-1)/1.5 var(--font-text); }
+@media (max-width: 960px) {
+  .modes-layout { grid-template-columns: 1fr; }
+  .modes-head { position: static; }
+}
+@media (max-width: 560px) {
+  .modes-list > div { grid-template-columns: 1fr; }
+}
