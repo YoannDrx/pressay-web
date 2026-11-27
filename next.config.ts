@@ -16,6 +16,13 @@ const modelRedirects = [
     destination:
       "https://huggingface.co/memoravox/whisper-large-v3-gguf/resolve/main/whisper-large-v3-Q5_K_M.gguf?download=true",
   },
+  {
+    // Upstream Handy's public conversion (MIT), pinned to an immutable
+    // revision. The app checks size and SHA-256 against the signed catalog.
+    source: "/pressay/whisper-turbo/v1/whisper-large-v3-turbo-Q5_K_M.gguf",
+    destination:
+      "https://huggingface.co/handy-computer/whisper-large-v3-turbo-gguf/resolve/5eaf945c7978e564bae5b28a5b1639dd93c2bfb1/whisper-large-v3-turbo-Q5_K_M.gguf?download=true",
+  },
 ] as const;
 
 const nextConfig: NextConfig = {
