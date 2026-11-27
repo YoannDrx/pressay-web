@@ -179,12 +179,12 @@ export function AccountDeletion({ locale }: { locale: "fr" | "en" }) {
           <p>
             {email
               ? tr(
-                  `Le compte ${email}, ses accès Cloud, appareils, clés d’accès et autorisations seront supprimés. Tes données locales sur le Mac ne sont pas touchées.`,
-                  `The account ${email}, its Cloud access, devices, passkeys and authorizations will be deleted. Local data on your Mac is not affected.`,
+                  `Le compte ${email}, ses accès Cloud, appareils, clés d’accès et autorisations seront supprimés. Tes données locales sur ton Mac ou ton PC ne sont pas touchées.`,
+                  `The account ${email}, its Cloud access, devices, passkeys and authorizations will be deleted. Local data on your Mac or PC is not affected.`,
                 )
               : tr(
-                  "Ton compte, ses accès Cloud, appareils, clés d’accès et autorisations seront supprimés. Tes données locales sur le Mac ne sont pas touchées.",
-                  "Your account, its Cloud access, devices, passkeys and authorizations will be deleted. Local data on your Mac is not affected.",
+                  "Ton compte, ses accès Cloud, appareils, clés d’accès et autorisations seront supprimés. Tes données locales sur ton Mac ou ton PC ne sont pas touchées.",
+                  "Your account, its Cloud access, devices, passkeys and authorizations will be deleted. Local data on your Mac or PC is not affected.",
                 )}
           </p>
           <div className="account-actions">

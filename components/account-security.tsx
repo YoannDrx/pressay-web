@@ -448,8 +448,8 @@ export function AccountSecurity({
         <h2>{tr("Appareils connectés", "Browser sessions")}</h2>
         <p>
           {tr(
-            "Révoquer une session web prend effet en moins d’une minute. Gère tes Mac depuis l’onglet Appareils.",
-            "Revoking a browser session takes effect within a minute. Manage your Macs from the Devices tab.",
+            "Révoquer une session web prend effet en moins d’une minute. Gère tes Mac et PC depuis l’onglet Appareils.",
+            "Revoking a browser session takes effect within a minute. Manage your Macs and PCs from the Devices tab.",
           )}
         </p>
         <div className="security-key-list">
